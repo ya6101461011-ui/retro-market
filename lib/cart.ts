@@ -9,16 +9,37 @@ export type CartItem = {
 const CART_KEY = "retro-market-cart";
 const CART_EVENT = "cart-updated";
 
-function normalizeOptions(value: unknown): Record<string, string> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return {};
+function normalizeOptions(
+  value: unknown,
+  product?: Product
+): Record<string, string> {
+  const rawOptions: Record<string, string> =
+    value && typeof value === "object" && !Array.isArray(value)
+      ? Object.fromEntries(
+          Object.entries(value as Record<string, unknown>)
+            .filter(([, optionValue]) => typeof optionValue === "string")
+            .map(([key, optionValue]) => [key, optionValue as string])
+        )
+      : {};
+
+  if (!product?.options?.length) {
+    return rawOptions;
   }
 
-  return Object.fromEntries(
-    Object.entries(value as Record<string, unknown>)
-      .filter(([, optionValue]) => typeof optionValue === "string")
-      .map(([key, optionValue]) => [key, optionValue as string])
-  );
+  const normalized: Record<string, string> = {};
+
+  for (const option of product.options) {
+    const selected = rawOptions[option.name];
+
+    if (selected && option.values.includes(selected)) {
+      normalized[option.name] = selected;
+    } else if (option.values.length > 0) {
+      // 若舊購物車沒有儲存規格，補上商品頁的第一個預設值。
+      normalized[option.name] = option.values[0];
+    }
+  }
+
+  return normalized;
 }
 
 function normalizeQuantity(value: unknown): number {
@@ -72,7 +93,10 @@ function normalizeCartItem(item: unknown): CartItem | null {
       product.stock,
       normalizeQuantity(raw.quantity)
     ),
-    selectedOptions: normalizeOptions(raw.selectedOptions),
+    selectedOptions: normalizeOptions(
+      raw.selectedOptions,
+      product
+    ),
   };
 }
 
@@ -94,9 +118,19 @@ export function getCart(): CartItem[] {
       return [];
     }
 
-    return parsed
+    const normalized = parsed
       .map(normalizeCartItem)
       .filter((item): item is CartItem => item !== null);
+
+    // 清理過期商品、無效規格與超出庫存的舊資料。
+    if (JSON.stringify(normalized) !== JSON.stringify(parsed)) {
+      window.localStorage.setItem(
+        CART_KEY,
+        JSON.stringify(normalized)
+      );
+    }
+
+    return normalized;
   } catch (error) {
     console.error("讀取購物車失敗:", error);
     return [];
@@ -134,7 +168,10 @@ export function addToCart(
   }
 
   const cart = getCart();
-  const safeOptions = normalizeOptions(selectedOptions);
+  const safeOptions = normalizeOptions(
+    selectedOptions,
+    product
+  );
   const safeQuantity = Math.min(
     product.stock,
     normalizeQuantity(quantity)
@@ -179,10 +216,22 @@ export function updateCartQuantity(
   selectedOptions: Record<string, string> = {}
 ) {
   const cart = getCart();
+  const product = getProductById(productId);
+
+  if (!product || product.stock <= 0) {
+    removeFromCart(productId, selectedOptions);
+    return;
+  }
+
+  const normalizedOptions = normalizeOptions(
+    selectedOptions,
+    product
+  );
+
   const item = cart.find(
     (cartItem) =>
       cartItem.productId === productId &&
-      sameOptions(cartItem.selectedOptions, selectedOptions)
+      sameOptions(cartItem.selectedOptions, normalizedOptions)
   );
 
   if (!item) {
@@ -190,21 +239,14 @@ export function updateCartQuantity(
   }
 
   if (quantity <= 0) {
-    removeFromCart(productId, selectedOptions);
+    removeFromCart(productId, normalizedOptions);
     return;
   }
 
-  const product = getProductById(productId);
-  const safeQuantity = Math.floor(quantity);
-
-  item.quantity = product
-    ? Math.min(product.stock, safeQuantity)
-    : safeQuantity;
-
-  if (item.quantity <= 0) {
-    removeFromCart(productId, selectedOptions);
-    return;
-  }
+  item.quantity = Math.min(
+    product.stock,
+    Math.max(1, Math.floor(quantity))
+  );
 
   saveCart(cart);
 }
@@ -214,12 +256,17 @@ export function removeFromCart(
   selectedOptions: Record<string, string> = {}
 ) {
   const cart = getCart();
+  const product = getProductById(productId);
+  const normalizedOptions = normalizeOptions(
+    selectedOptions,
+    product
+  );
 
   const newCart = cart.filter(
     (item) =>
       !(
         item.productId === productId &&
-        sameOptions(item.selectedOptions, selectedOptions)
+        sameOptions(item.selectedOptions, normalizedOptions)
       )
   );
 
