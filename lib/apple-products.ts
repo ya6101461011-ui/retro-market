@@ -1,16 +1,69 @@
 import type { Product } from "./products";
 
 const img = {
-  phone: "https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?w=1200&q=90",
-  tablet: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=1200&q=90",
-  laptop: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=1200&q=90",
-  desktop: "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=1200&q=90",
-  display: "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=1200&q=90",
-  watch: "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=1200&q=90",
-  audio: "https://images.unsplash.com/photo-1606220945770-b5b6c2c55bf1?w=1200&q=90",
-  vision: "https://images.unsplash.com/photo-1592478411213-6153e4ebc696?w=1200&q=90",
-  tv: "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=1200&q=90",
-  accessory: "https://images.unsplash.com/photo-1603539947678-cd3954ed515e?w=1200&q=90",
+  phone: "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-16-finish-select-202409-6-1inch-black_FMT_WHH?wid=1280&hei=1280&fmt=p-jpg&qlt=90",
+  tablet: "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/ipad-pro-11-select-202210?wid=1200&hei=1200&fmt=png-alpha&.v=1664411207110",
+  laptop: "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/mba15-m4-starlight-gallery1-202503?wid=1200&hei=1200&fmt=png-alpha",
+  desktop: "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/mac-mini-select-202410?wid=1200&hei=1200&fmt=png-alpha",
+  display: "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/studio-display-select-202203?wid=1200&hei=1200&fmt=png-alpha",
+  watch: "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/ultra-case-unselect-gallery-1-202609_GEO_EMEA_FMT_WHH?wid=1200&hei=1200&fmt=p-jpg&qlt=90",
+  audio: "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/MME73_AV1?wid=1144&hei=1144&fmt=jpeg&qlt=95&.v=1632861333000",
+  vision: "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/vision-pro-og-202510?wid=1200&hei=1200&fmt=jpeg&qlt=95&.v=1758671941889",
+  tv: "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/apple-tv-4k-hero-select-202210?wid=1200&hei=1200&fmt=png-alpha&.v=1664896361408",
+  accessory: "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/airtag-select-202104?wid=1200&hei=1200&fmt=png-alpha",
+};
+
+const appleImageById: Record<string, string> = {
+  "apple-iphone-duo": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-duo-finish-select-202609-starwhite_GEO_EMEA?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-iphone-18-pro": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-18-pro-finish-select-202609-6-3inch_GEO_EMEA?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-iphone-18-pro-max": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-18-pro-finish-select-202609-6-9inch_GEO_EMEA?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-iphone-air": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-air-finish-select-202509-skyblue_FMT_WHH?wid=1280&hei=1280&fmt=p-jpg&qlt=90",
+  "apple-iphone-17": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-17-finish-select-lavender-202509_GEO_US?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-iphone-17e": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-17e-finish-select-black-202603?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-iphone-16": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-16-finish-select-202409-6-1inch-black_FMT_WHH?wid=1280&hei=1280&fmt=p-jpg&qlt=90",
+
+  "apple-ipad-pro-11-m5": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/ipad-pro-11-select-202510?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-ipad-pro-13-m5": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/ipad-pro-13-select-202510?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-ipad-air-11-m4": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/ipad-air-11-select-202503?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-ipad-air-13-m4": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/ipad-air-13-select-202503?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-ipad-a16": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/ipad-11-select-202503?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-ipad-mini-a17-pro": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/ipad-mini-select-202410?wid=1200&hei=1200&fmt=png-alpha",
+
+  "apple-macbook-neo": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/macbook-neo-select-202603?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-macbook-air-13-m5": "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/mba15-m4-starlight-gallery1-202503?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-macbook-air-15-m5": "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/mba15-m4-starlight-gallery1-202503?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-macbook-pro-14-m5": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/mbp14-m5-spaceblack-gallery1-202510?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-macbook-pro-16-m5": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/mbp16-m5-spaceblack-gallery1-202510?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-imac-24": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/imac-24-blue-select-202410?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-mac-mini": "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/mac-mini-select-202410?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-mac-studio": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/mac-studio-select-202503?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-mac-pro": "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/mac-pro-tower-hero-splitter-2023?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-studio-display": "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/studio-display-select-202203?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-studio-display-xdr": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/pro-display-xdr-select-202306?wid=1200&hei=1200&fmt=png-alpha",
+
+  "apple-watch-series-11": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/watch-series-11-select-202509?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-watch-ultra-3": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/ultra-case-unselect-gallery-1-202609_GEO_EMEA_FMT_WHH?wid=1200&hei=1200&fmt=p-jpg&qlt=90",
+  "apple-watch-se-3": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/watch-se-3-select-202509?wid=1200&hei=1200&fmt=png-alpha",
+
+  "apple-airpods-5": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/airpods-5-select-202609?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-airpods-5-wireless": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/airpods-5-wireless-select-202609?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-airpods-pro-3": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/airpods-pro-3-select-202509?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-airpods-max-2": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/airpods-max-202409-select-blue?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-vision-pro": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/vision-pro-og-202510?wid=1200&hei=1200&fmt=jpeg&qlt=95&.v=1758671941889",
+  "apple-tv-4k-wifi": "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/apple-tv-4k-hero-select-202210?wid=1200&hei=1200&fmt=png-alpha&.v=1664896361408",
+  "apple-tv-4k-ethernet": "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/apple-tv-4k-hero-select-202210?wid=1200&hei=1200&fmt=png-alpha&.v=1664896361408",
+  "apple-homepod": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/homepod-202301-select-white?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-homepod-mini": "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/homepod-mini-select-202010?wid=1200&hei=1200&fmt=png-alpha",
+
+  "apple-airtag": "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/airtag-select-202104?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-airtag-4-pack": "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/airtag-4pack-select-202104?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-pencil-pro": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/MX2D3?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-pencil-usbc": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/MUWA3?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-magic-keyboard": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/MXK83?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-magic-mouse": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/MXK53?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-magic-trackpad": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/MXK93?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-140w-usbc-adapter": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/MW2M3?wid=1200&hei=1200&fmt=png-alpha",
+  "apple-35w-dual-usbc": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/MNWM3?wid=1200&hei=1200&fmt=png-alpha",
 };
 
 function product(
@@ -23,6 +76,7 @@ function product(
   options?: Product["options"],
 ): Product {
   const oldPrice = Math.round((price * 1.14) / 100) * 100;
+  const officialImage = appleImageById[id] ?? image;
   return {
     id,
     name,
@@ -35,8 +89,8 @@ function product(
     rating: 4.8,
     reviewCount: 280 + id.length * 41,
     tag,
-    image,
-    images: [image],
+    image: officialImage,
+    images: [officialImage],
     description: `${name}。RETROMART 虛擬展示商品；機型、產品線與起售價格依 Apple 台灣官方網站目前資料整理。`,
     specs: [
       { label: "品牌", value: "Apple" },
@@ -78,7 +132,7 @@ export const appleProducts: Product[] = [
     { name: "顏色", values: ["黑色", "白色", "粉紅色", "藍色", "湖水綠色"] },
   ]),
 
-  // iPad — 11 / 13 吋完整產品線
+  // iPad
   product("apple-ipad-pro-11-m5", "11 吋 iPad Pro (M5)", "平板", 39900, img.tablet, "旗艦", [
     { name: "容量", values: ["256GB", "512GB", "1TB", "2TB"] },
     { name: "連線", values: ["Wi-Fi", "Wi-Fi + 行動網路"] },
@@ -110,7 +164,7 @@ export const appleProducts: Product[] = [
     { name: "顏色", values: ["太空灰色", "藍色", "紫色", "星光色"] },
   ]),
 
-  // Mac — MacBook Neo / Air / Pro / 桌上型 Mac / 顯示器
+  // Mac
   product("apple-macbook-neo", "MacBook Neo", "筆電", 22900, img.laptop, "NEW", [
     { name: "顏色", values: ["銀色", "胭粉色", "青橘黃色", "靛青色"] },
     { name: "儲存", values: ["256GB", "512GB"] },
