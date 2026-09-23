@@ -94,9 +94,11 @@ export default function CartPage() {
     }
   }
 
-  function completeSlide() {
-    if (slideValue < 100 || displayItems.length === 0) return;
-    router.push("/checkout");
+  function handleSlide(value: number) {
+    setSlideValue(value);
+    if (value >= 100 && displayItems.length > 0) {
+      window.setTimeout(() => router.push("/checkout"), 120);
+    }
   }
 
   if (!ready) {
@@ -255,13 +257,14 @@ export default function CartPage() {
                     min="0"
                     max="100"
                     value={slideValue}
-                    onChange={(event) => setSlideValue(Number(event.target.value))}
-                    onMouseUp={completeSlide}
-                    onTouchEnd={completeSlide}
-                    onKeyUp={completeSlide}
+                    onChange={(event) => handleSlide(Number(event.target.value))}
                     aria-label={`滑動確認虛擬訂單，金額 NT$${orderTotal.toLocaleString()}`}
                   />
-                  <span className="sliderKnob" aria-hidden="true">»</span>
+                  <span
+                    className="sliderKnob"
+                    style={{ left: `calc(5px + (100% - 64px) * ${slideValue / 100})` }}
+                    aria-hidden="true"
+                  >»</span>
                 </div>
               </div>
 
@@ -349,9 +352,7 @@ export default function CartPage() {
         .sliderText.hidden { opacity:.08; }
         .sliderTrack input { position:absolute; inset:0; z-index:4; width:100%; height:100%; margin:0; opacity:0; cursor:grab; }
         .sliderTrack input:active { cursor:grabbing; }
-        .sliderKnob { position:absolute; z-index:3; top:5px; left:5px; width:54px; height:54px; display:grid; place-items:center; border-radius:50%; background:#ed4b12; color:#fff; font-size:28px; font-weight:900; box-shadow:0 2px 5px rgba(0,0,0,.18); pointer-events:none; transition:left .08s linear; }
-        .sliderTrack input { --slider-position: 0%; }
-        .sliderTrack input + .sliderKnob { left:calc(5px + (100% - 64px) * var(--slider-position, 0)); }
+        .sliderKnob { position:absolute; z-index:3; top:5px; width:54px; height:54px; display:grid; place-items:center; border-radius:50%; background:#ed4b12; color:#fff; font-size:28px; font-weight:900; box-shadow:0 2px 5px rgba(0,0,0,.18); pointer-events:none; transition:left .08s linear; }
         .returns { margin:12px 0 0; color:#666; font-size:11px; text-align:center; }
         .fallbackCheckout { border:0; background:transparent; color:#777; font-size:12px; font-weight:700; cursor:pointer; padding:6px; text-decoration:underline; }
         .fallbackCheckout:hover { color:#111; }
