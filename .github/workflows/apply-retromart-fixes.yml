@@ -1,0 +1,288 @@
+name: Apply RETROMART catalog fixes
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/apply-retromart-fixes.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply catalog and UX fixes
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          products = Path('lib/products.ts')
+          text = products.read_text(encoding='utf-8')
+
+          text = text.replace(
+              'id: "apple-watch-ultra",\n\n    name: "Apple Watch Ultra",\n\n    brand: "Apple",\n\n    category: "手機",',
+              'id: "apple-watch-ultra",\n\n    name: "Apple Watch Ultra",\n\n    brand: "Apple",\n\n    category: "手錶",',
+          )
+
+          text = text.replace(
+              'id: "dji-drone",\n\n    name: "DJI 旗艦空拍機",\n\n    brand: "DJI",\n\n    category: "相機",',
+              'id: "dji-drone",\n\n    name: "DJI 旗艦空拍機",\n\n    brand: "DJI",\n\n    category: "空拍機",',
+          )
+
+          if 'id: "gaming-desktop-rtx-5080"' not in text:
+              desktop = r'''
+
+  // =====================================================
+  // RETROMART catalog: desktop PC
+  // =====================================================
+
+  {
+    id: "gaming-desktop-rtx-5080",
+
+    name: "RETROMART RTX 5080 旗艦電競桌機",
+
+    brand: "RETROMART",
+
+    category: "電腦",
+
+    price: 89900,
+
+    oldPrice: 99900,
+
+    sold: 1268,
+
+    stock: 9,
+
+    rating: 4.8,
+
+    reviewCount: 428,
+
+    tag: "旗艦",
+
+    image:
+      "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=1200&q=90",
+
+    images: [
+      "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=1200&q=90",
+      "https://images.unsplash.com/photo-1593640495253-23196b27a87f?w=1200&q=90",
+    ],
+
+    description:
+      "高效能桌上型電競電腦，適合 4K 遊戲、影音創作與高效能運算需求。",
+
+    specs: [
+      {
+        label: "品牌",
+        value: "RETROMART",
+      },
+      {
+        label: "產品類型",
+        value: "桌上型電腦",
+      },
+      {
+        label: "顯示卡",
+        value: "NVIDIA GeForce RTX 5080",
+      },
+      {
+        label: "處理器",
+        value: "Intel Core Ultra 7",
+      },
+      {
+        label: "記憶體",
+        value: "32GB DDR5",
+      },
+      {
+        label: "儲存",
+        value: "2TB NVMe SSD",
+      },
+    ],
+  },
+'''
+              marker = '\n];'
+              if marker not in text:
+                  raise SystemExit('Could not find products array terminator')
+              text = text.replace(marker, desktop + marker, 1)
+
+          products.write_text(text, encoding='utf-8')
+
+          page = Path('app/page.tsx')
+          text = page.read_text(encoding='utf-8')
+
+          text = text.replace(
+              '  "電腦",\n  "筆電",',
+              '  "電腦",\n  "筆電",\n  "手錶",\n  "空拍機",',
+              1,
+          )
+
+          text = text.replace(
+              '  const [selectedCategory, setSelectedCategory] =\n    useState("全部");\n\n  const [search, setSearch] = useState("");',
+              '''  const [selectedCategory, setSelectedCategory] = useState(() => {
+    if (typeof window === "undefined") return "全部";
+    return new URLSearchParams(window.location.search).get("category") || "全部";
+  });
+
+  const [search, setSearch] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return new URLSearchParams(window.location.search).get("search") || "";
+  });''',
+              1,
+          )
+
+          anchor = '''  useEffect(() => {
+    const updateCart = () => {
+      setCartCount(getCartCount());
+    };'''
+
+          url_sync = '''  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+
+    if (selectedCategory === "全部") {
+      params.delete("category");
+    } else {
+      params.set("category", selectedCategory);
+    }
+
+    if (search.trim()) {
+      params.set("search", search.trim());
+    } else {
+      params.delete("search");
+    }
+
+    const query = params.toString();
+    const nextUrl = query ? `/?${query}` : "/";
+    window.history.replaceState(null, "", nextUrl);
+  }, [selectedCategory, search]);
+
+'''
+
+          if anchor not in text:
+              raise SystemExit('Could not find cart sync effect')
+          text = text.replace(anchor, url_sync + anchor, 1)
+
+          old_category_click = '''              onClick={() =>
+                setSelectedCategory(category)
+              }'''
+          new_category_click = '''              onClick={() => {
+                setSelectedCategory(category);
+                document
+                  .getElementById("products")
+                  ?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}'''
+          if old_category_click not in text:
+              raise SystemExit('Could not find category click handler')
+          text = text.replace(old_category_click, new_category_click, 1)
+
+          old_search_input = '''            onChange={(e) =>
+              setSearch(e.target.value)
+            }
+            placeholder="搜尋手機、電視、顯卡、精品、汽車..."'''
+          new_search_input = '''            onChange={(e) =>
+              setSearch(e.target.value)
+            }
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                document
+                  .getElementById("products")
+                  ?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }
+            }}
+            aria-label="搜尋商品"
+            placeholder="搜尋手機、電視、顯卡、精品、汽車..."'''
+          if old_search_input not in text:
+              raise SystemExit('Could not find search input')
+          text = text.replace(old_search_input, new_search_input, 1)
+
+          css_anchor = '''        .searchBox input {
+          width: 100%;
+          border: none;
+          outline: none;
+          background: transparent;
+          font-size: 14px;
+        }'''
+          css_extra = '''
+
+        .searchBox:focus-within {
+          border-color: #111;
+          box-shadow: 0 0 0 3px rgba(17,17,17,.06);
+        }
+
+        .imageArea {
+          position: relative;
+          isolation: isolate;
+        }
+
+        .tag,
+        .discount {
+          top: 12px;
+          z-index: 2;
+          white-space: nowrap;
+          line-height: 1;
+        }
+
+        .tag {
+          left: 12px;
+          max-width: 55%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .discount {
+          right: 12px;
+          left: auto;
+        }
+'''
+          if css_anchor not in text:
+              raise SystemExit('Could not find search CSS anchor')
+          text = text.replace(css_anchor, css_anchor + css_extra, 1)
+
+          empty_css_anchor = '''        .empty {
+          padding: 70px 20px;
+          text-align: center;
+          color: #777;
+        }'''
+          if empty_css_anchor in text:
+              text = text.replace(
+                  empty_css_anchor,
+                  '''        .empty {
+          padding: 70px 20px;
+          text-align: center;
+          color: #777;
+        }
+
+        .empty::before {
+          content: "🔎";
+          display: block;
+          margin-bottom: 10px;
+          font-size: 32px;
+        }''',
+                  1,
+              )
+
+          page.write_text(text, encoding='utf-8')
+
+          print('RETROMART fixes applied')
+
+      - name: Validate
+        run: |
+          npm ci
+          npm run build
+
+      - name: Commit fixes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib/products.ts app/page.tsx
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "fix: improve RETROMART catalog filters and product categories"
+          git push
