@@ -22,12 +22,26 @@ export default function CheckoutPage() {
   const [form, setForm] = useState<CheckoutForm>(initialForm);
 
   useEffect(() => {
-    setCartItems(getCart());
+    const refresh = () => setCartItems(getCart());
+
+    refresh();
     try {
       const saved = window.sessionStorage.getItem(FORM_KEY);
       if (saved) setForm({ ...initialForm, ...(JSON.parse(saved) as Partial<CheckoutForm>) });
     } catch {}
     setLoaded(true);
+
+    const onCartUpdate = () => refresh();
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === "retro-market-cart") refresh();
+    };
+
+    window.addEventListener("cart-updated", onCartUpdate);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("cart-updated", onCartUpdate);
+      window.removeEventListener("storage", onStorage);
+    };
   }, []);
 
   useEffect(() => {
@@ -52,9 +66,19 @@ export default function CheckoutPage() {
     const phone = form.phone.trim();
     const email = form.email.trim();
     const address = form.address.trim();
-    if (!name || !phone || !email || !address) { alert("請完整填寫收件資訊。"); return false; }
-    if (!/^09\d{8}$/.test(phone)) { alert("請輸入正確的台灣手機號碼，例如 0912345678。"); return false; }
-    if (!/^\S+@\S+\.\S+$/.test(email)) { alert("請輸入正確的 Email。"); return false; }
+
+    if (!name || !phone || !email || !address) {
+      alert("請完整填寫收件資訊。");
+      return false;
+    }
+    if (!/^09\d{8}$/.test(phone)) {
+      alert("請輸入正確的台灣手機號碼，例如 0912345678。");
+      return false;
+    }
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      alert("請輸入正確的 Email。");
+      return false;
+    }
     return true;
   }
 
@@ -73,7 +97,10 @@ export default function CheckoutPage() {
       return;
     }
 
-    const stockProblem = latestProducts.find((item) => item.product.stock <= 0 || item.quantity > item.product.stock);
+    const stockProblem = latestProducts.find(
+      (item) => item.product.stock <= 0 || item.quantity > item.product.stock
+    );
+
     if (stockProblem) {
       alert(`「${stockProblem.product.name}」庫存不足，請回購物車調整數量。`);
       setCartItems(getCart());
@@ -82,6 +109,7 @@ export default function CheckoutPage() {
 
     const latestTotal = latestProducts.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
     const latestQuantity = latestProducts.reduce((sum, item) => sum + item.quantity, 0);
+
     setSubmitting(true);
     setOrderTotal(latestTotal);
     setOrderQuantity(latestQuantity);
@@ -97,7 +125,7 @@ export default function CheckoutPage() {
   if (orderNumber) return (
     <main className="page">
       <header className="header"><Link href="/" className="logo">RETROMART</Link><Link href="/" className="headerLink">← 回首頁</Link></header>
-      <section className="successCard">
+      <section className="successCard" aria-live="polite">
         <div className="successIcon">✓</div><div className="eyebrow">ORDER CREATED</div><h1>虛擬訂單已建立</h1>
         <p>這是一筆展示用訂單，不會產生真實付款或商品配送。</p>
         <div className="orderNumber"><span>訂單編號</span><strong>{orderNumber}</strong></div>
@@ -133,7 +161,7 @@ export default function CheckoutPage() {
             <label>收件地址<input value={form.address} onChange={(e) => updateField("address", e.target.value)} placeholder="請輸入收件地址" autoComplete="street-address" maxLength={150} required /></label>
           </div>
           <h2 className="paymentTitle">付款方式</h2>
-          <div className="payments">{["信用卡", "貨到付款", "銀行轉帳"].map((method) => <button type="button" key={method} onClick={() => updateField("payment", method)} className={form.payment === method ? "payment selected" : "payment"}>{form.payment === method ? "● " : "○ "}{method}</button>)}</div>
+          <div className="payments">{["信用卡", "貨到付款", "銀行轉帳"].map((method) => <button type="button" key={method} onClick={() => updateField("payment", method)} className={form.payment === method ? "payment selected" : "payment"} aria-pressed={form.payment === method}>{form.payment === method ? "● " : "○ "}{method}</button>)}</div>
           <div className="notice">本網站為虛擬購物體驗。<br />不會真的進行信用卡扣款，也不會實際配送商品。</div>
           <button type="submit" className="submit" disabled={submitting}>{submitting ? "建立中..." : "建立虛擬訂單 →"}</button>
         </form>
@@ -143,7 +171,7 @@ export default function CheckoutPage() {
           <div className="items">{products.map((item) => {
             const optionsText = Object.entries(item.selectedOptions || {}).map(([key, value]) => `${key}：${value}`).join(" / ");
             return <div key={item.product.id + JSON.stringify(item.selectedOptions)} className="item">
-              <img src={item.product.image} alt={item.product.name} onError={(e) => { if (e.currentTarget.src !== FALLBACK_IMAGE) e.currentTarget.src = FALLBACK_IMAGE; }} />
+              <img src={item.product.image} alt={item.product.name} loading="lazy" onError={(e) => { if (e.currentTarget.src !== FALLBACK_IMAGE) e.currentTarget.src = FALLBACK_IMAGE; }} />
               <div className="itemInfo"><strong>{item.product.name}</strong>{optionsText && <span>{optionsText}</span>}<small>× {item.quantity}</small></div>
               <strong>NT${(item.product.price * item.quantity).toLocaleString()}</strong>
             </div>;
