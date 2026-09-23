@@ -1,0 +1,57 @@
+name: Integrate Apple catalog
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lib/apple-products.ts'
+      - '.github/workflows/integrate-apple-products.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Integrate Apple products and categories
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          products = Path('lib/products.ts')
+          text = products.read_text(encoding='utf-8')
+          if 'import { appleProducts } from "./apple-products";' not in text:
+              text = text.replace('export type Product = {', 'import { appleProducts } from "./apple-products";\n\nexport type Product = {', 1)
+          if '...appleProducts,' not in text:
+              marker = 'export const products: Product[] = ['
+              text = text.replace(marker, marker + '\n  ...appleProducts,\n', 1)
+          products.write_text(text, encoding='utf-8')
+
+          page = Path('app/page.tsx')
+          p = page.read_text(encoding='utf-8')
+          p = p.replace('"全部", "手機", "筆電", "顯卡", "電視", "電玩", "相機", "空拍機",', '"全部", "手機", "平板", "筆電", "電腦", "顯示器", "顯卡", "電視", "電玩", "相機", "空拍機",', 1)
+          p = p.replace('全部: "all", 手機: "phone", 筆電: "laptop", 顯卡:', '全部: "all", 手機: "phone", 平板: "tablet", 筆電: "laptop", 電腦: "computer", 顯示器: "display", 顯卡:', 1)
+          page.write_text(p, encoding='utf-8')
+          PY
+
+      - name: Validate production build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Commit integration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib/products.ts app/page.tsx
+          if git diff --cached --quiet; then
+            echo "No integration changes needed"
+            exit 0
+          fi
+          git commit -m "feat: integrate Apple catalog and categories"
+          git push
