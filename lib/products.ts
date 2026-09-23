@@ -1,3 +1,5 @@
+import { appleProducts } from "./apple-products";
+
 export type Product = {
   id: string;
   name: string;
@@ -48,6 +50,8 @@ export type Product = {
 
 
 export const products: Product[] = [
+  ...appleProducts,
+
 
   // =====================================================
   // 01 iPhone 17 Pro Max
