@@ -1,4 +1,4 @@
-name: Apply RETROMART catalog fixes
+name: Apply RETROMART fixes
 
 on:
   push:
@@ -17,109 +17,166 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Apply catalog fixes
+      - name: Apply RETROMART UX upgrades
         run: |
           python - <<'PY'
           from pathlib import Path
-
-          products = Path('lib/products.ts')
-          text = products.read_text(encoding='utf-8')
-
-          text = text.replace(
-              'id: "apple-watch-ultra",\n\n    name: "Apple Watch Ultra",\n\n    brand: "Apple",\n\n    category: "手機",',
-              'id: "apple-watch-ultra",\n\n    name: "Apple Watch Ultra",\n\n    brand: "Apple",\n\n    category: "智慧手錶",',
-          )
-
-          text = text.replace(
-              'id: "dji-drone",\n\n    name: "DJI 旗艦空拍機",\n\n    brand: "DJI",\n\n    category: "相機",',
-              'id: "dji-drone",\n\n    name: "DJI 旗艦空拍機",\n\n    brand: "DJI",\n\n    category: "空拍機",',
-          )
-
-          if 'id: "gaming-desktop-rtx-5080"' not in text:
-              desktop = '''
-
-  // =====================================================
-  // RETROMART catalog: desktop PC
-  // =====================================================
-
-  {
-    id: "gaming-desktop-rtx-5080",
-
-    name: "RETROMART RTX 5080 旗艦電競桌機",
-
-    brand: "RETROMART",
-
-    category: "電腦",
-
-    price: 89900,
-
-    oldPrice: 99900,
-
-    sold: 1268,
-
-    stock: 9,
-
-    rating: 4.8,
-
-    reviewCount: 428,
-
-    tag: "旗艦",
-
-    image:
-      "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=1200&q=90",
-
-    images: [
-      "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=1200&q=90",
-      "https://images.unsplash.com/photo-1593640495253-23196b27a87f?w=1200&q=90",
-    ],
-
-    description:
-      "高效能桌上型電競電腦，適合 4K 遊戲、影音創作與高效能運算需求。",
-
-    specs: [
-      {
-        label: "品牌",
-        value: "RETROMART",
-      },
-      {
-        label: "產品類型",
-        value: "桌上型電腦",
-      },
-      {
-        label: "顯示卡",
-        value: "NVIDIA GeForce RTX 5080",
-      },
-      {
-        label: "處理器",
-        value: "Intel Core Ultra 7",
-      },
-      {
-        label: "記憶體",
-        value: "32GB DDR5",
-      },
-      {
-        label: "儲存",
-        value: "2TB NVMe SSD",
-      },
-    ],
-  },
-'''
-              marker = '\n];'
-              if marker not in text:
-                  raise SystemExit('Could not find products array terminator')
-              text = text.replace(marker, desktop + marker, 1)
-
-          products.write_text(text, encoding='utf-8')
+          import re
 
           page = Path('app/page.tsx')
-          page_text = page.read_text(encoding='utf-8')
-          page_text = page_text.replace(
-              '  "手機",\n  "筆電",',
-              '  "手機",\n  "電腦",\n  "筆電",',
+          text = page.read_text(encoding='utf-8')
+
+          # Add cart bounce state.
+          text = text.replace(
+              '  const [cartTotal, setCartTotal] = useState(0);\n',
+              '  const [cartTotal, setCartTotal] = useState(0);\n  const [cartPulse, setCartPulse] = useState(false);\n',
               1,
           )
-          page.write_text(page_text, encoding='utf-8')
-          print('Catalog fixes applied')
+
+          # Make the add-to-cart feedback show the actual saving amount and bounce the cart.
+          old = '''  const addProduct = (product: (typeof products)[number]) => {\n    const added = addToCart(product);\n    syncCart();\n    if (added) {\n      setToast(`✓ ${product.name} 已加入購物車`);\n    } else {\n      setToast(product.stock > 0 ? "已達此商品庫存上限" : "此商品目前缺貨");\n    }\n  };'''
+          new = '''  const addProduct = (product: (typeof products)[number]) => {\n    const added = addToCart(product);\n    syncCart();\n    if (added) {\n      const saving = Math.max(0, product.oldPrice - product.price);\n      setCartPulse(true);\n      window.setTimeout(() => setCartPulse(false), 650);\n      setToast(`✓ 已成功加入！本次為您省下 NT$${money(saving)}！`);\n    } else {\n      setToast(product.stock > 0 ? "已達此商品庫存上限" : "此商品目前缺貨");\n    }\n  };'''
+          if old not in text:
+              raise SystemExit('addProduct block not found')
+          text = text.replace(old, new, 1)
+
+          text = text.replace(
+              '<Link href="/cart" className="cartButton" aria-label={`購物車，共 ${cartCount} 件商品`}>',
+              '<Link href="/cart" className={cartPulse ? "cartButton cartPulse" : "cartButton"} aria-label={`購物車，共 ${cartCount} 件商品`}>',
+              1,
+          )
+
+          # More frequent floating activity notifications.
+          text = text.replace('}, 8500);', '}, 4000);', 1)
+          text = text.replace('className="purchaseToast"', 'className="purchaseToast"', 1)
+
+          # Improve savings badge semantics.
+          text = text.replace('className="saving">立省 NT${money(saving)}', 'className="saving">💰 立省 NT${money(saving)}', 1)
+
+          # Category scroller: CSS-only fade edges, hidden scrollbar, smooth touch scrolling.
+          text = text.replace(
+              '.categoryList{display:flex;gap:8px;overflow-x:auto;padding-bottom:5px}',
+              '.categorySection{position:relative}.categoryList{display:flex;gap:8px;overflow-x:auto;padding:4px 28px 10px 2px;scrollbar-width:none;-ms-overflow-style:none;scroll-behavior:smooth;overscroll-behavior-inline:contain;mask-image:linear-gradient(to right,transparent 0,#000 28px,#000 calc(100% - 28px),transparent 100%)}.categoryList::-webkit-scrollbar{display:none}',
+              1,
+          )
+
+          # Badge stacking and price hierarchy.
+          text = text.replace(
+              '.badges{position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;gap:8px;align-items:start}',
+              '.badges{position:absolute;top:14px;left:14px;right:14px;display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none}.badges .tag{margin-right:auto}.badges .discount{margin-left:auto}',
+              1,
+          )
+          text = text.replace(
+              '.viewers{position:absolute;bottom:10px;right:10px;',
+              '.viewers{position:absolute;bottom:12px;right:12px;',
+              1,
+          )
+          text = text.replace(
+              '.price strong{font-size:20px}.price span{text-decoration:line-through;color:#aaa;font-size:11px}',
+              '.price strong{font-size:24px;font-weight:900;letter-spacing:-.5px}.price span{text-decoration:line-through;color:#aaa;font-size:11px}',
+              1,
+          )
+          text = text.replace(
+              '.saving{margin-top:4px;color:#e11d48;font-size:11px;font-weight:800}',
+              '.saving{display:inline-flex;align-items:center;margin-top:7px;padding:5px 8px;background:#f6e85f;color:#111;border-radius:5px;font-size:11px;font-weight:900}',
+              1,
+          )
+
+          # Toast positions and cart bounce animation.
+          text = text.replace(
+              '.purchaseToast{bottom:22px}',
+              '.purchaseToast{left:22px;bottom:22px;right:auto;animation:toastPop .35s ease}',
+              1,
+          )
+          text = text.replace(
+              '.actionToast{top:100px;right:50%;transform:translateX(50%);',
+              '.actionToast{top:100px;right:50%;transform:translateX(50%);',
+              1,
+          )
+          text = text.replace(
+              '@keyframes slideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}',
+              '@keyframes slideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}@keyframes toastPop{0%{opacity:0;transform:translateY(12px) scale(.94)}100%{opacity:1;transform:translateY(0) scale(1)}}@keyframes cartBounce{0%,100%{transform:scale(1)}35%{transform:scale(1.16) rotate(-2deg)}65%{transform:scale(.96) rotate(2deg)}}.cartPulse{animation:cartBounce .65s ease;transform-origin:center}',
+              1,
+          )
+
+          # Responsive category list should remain touch-friendly.
+          text = text.replace(
+              '@media(max-width:900px){',
+              '@media(max-width:900px){.categoryList{padding-right:18px}',
+              1,
+          )
+
+          page.write_text(text, encoding='utf-8')
+
+          cart = Path('app/cart/page.tsx')
+          c = cart.read_text(encoding='utf-8')
+          c = c.replace(
+              '.header { height:78px;',
+              '.header { height:78px;',
+              1,
+          )
+          c = c.replace(
+              '.checkout { margin-top:25px; }',
+              '.checkout { margin-top:25px; position:relative; overflow:hidden; } .checkout::after{content:"⚡ 虛擬刷卡 0 元";display:block;margin-top:5px;font-size:10px;font-weight:500;color:#aaa}',
+              1,
+          )
+          c = c.replace(
+              '.grandTotal strong { font-size:25px; }',
+              '.grandTotal strong { font-size:25px; } .summary::before{content:"💰 本次虛擬購物完全免費";display:block;margin-bottom:14px;padding:8px 10px;background:#f6e85f;color:#111;border-radius:7px;font-size:11px;font-weight:900;text-align:center}',
+              1,
+          )
+          cart.write_text(c, encoding='utf-8')
+
+          checkout = Path('app/checkout/page.tsx')
+          x = checkout.read_text(encoding='utf-8')
+
+          # Add a virtual card number field without collecting real payment data.
+          x = x.replace(
+              'type CheckoutForm = { name: string; phone: string; email: string; address: string; payment: string };',
+              'type CheckoutForm = { name: string; phone: string; email: string; address: string; payment: string; cardNumber: string };',
+              1,
+          )
+          x = x.replace(
+              'const initialForm: CheckoutForm = { name: "", phone: "", email: "", address: "", payment: "信用卡" };',
+              'const initialForm: CheckoutForm = { name: "", phone: "", email: "", address: "", payment: "信用卡", cardNumber: "" };',
+              1,
+          )
+          marker = '''          <div className="payments">{["信用卡", "貨到付款", "銀行轉帳"].map((method) => <button type="button" key={method} onClick={() => updateField("payment", method)} className={form.payment === method ? "payment selected" : "payment"} aria-pressed={form.payment === method}>{form.payment === method ? "● " : "○ "}{method}</button>)}</div>'''
+          replacement = marker + '''\n          {form.payment === "信用卡" && (\n            <div className="virtualCard">\n              <div className="virtualCardTop"><strong>VIRTUAL CARD</strong><span>RETROMART</span></div>\n              <label>虛擬卡號<input value={form.cardNumber} onChange={(e) => updateField("cardNumber", e.target.value.replace(/\\D/g, "").slice(0, 16))} placeholder="8888 8888 8888 8888" inputMode="numeric" aria-label="虛擬信用卡號" /></label>\n              <button type="button" className="demoCard" onClick={() => updateField("cardNumber", "8888888888888888")}>一鍵填入虛擬卡 8888-8888-8888-8888</button>\n              <small>僅供遊戲體驗，不會送出或扣款。</small>\n            </div>\n          )}'''
+          if marker not in x:
+              raise SystemExit('checkout payment marker not found')
+          x = x.replace(marker, replacement, 1)
+
+          # Replace success icon with celebratory confetti scene.
+          x = x.replace(
+              '<div className="successIcon">✓</div><div className="eyebrow">ORDER CREATED</div><h1>虛擬訂單已建立</h1>',
+              '<div className="confetti" aria-hidden="true">{Array.from({ length: 28 }, (_, index) => <i key={index} style={{ ["--i" as string]: index }} />)}</div><div className="successIcon">✓</div><div className="eyebrow">ORDER CREATED</div><h1>🎉 訂單成立！</h1>',
+              1,
+          )
+          x = x.replace(
+              '這是一筆展示用訂單，不會產生真實付款或商品配送。',
+              '您剛剛體驗了免費購物的快樂！這是一筆展示用訂單，不會產生真實付款或商品配送。',
+              1,
+          )
+
+          # Add styles for virtual card and confetti.
+          x = x.replace(
+              '.notice{margin-top:30px;',
+              '.virtualCard{margin-top:22px;padding:18px;border-radius:12px;background:linear-gradient(135deg,#181818,#3b3b3b);color:#fff}.virtualCardTop{display:flex;justify-content:space-between;font-size:11px;letter-spacing:1px;margin-bottom:18px}.virtualCard label{color:#fff}.virtualCard input{background:#fff;color:#111;letter-spacing:2px}.demoCard{width:100%;margin-top:10px;padding:11px;border:1px solid #666;border-radius:8px;background:#fff;color:#111;font-weight:800;cursor:pointer}.virtualCard small{display:block;margin-top:8px;color:#aaa;font-size:10px}.notice{margin-top:30px;',
+              1,
+          )
+          x = x.replace(
+              '.successIcon{width:70px;',
+              '.confetti{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0}.confetti i{position:absolute;top:-20px;left:calc((var(--i) * 37) % 100 * 1%);width:9px;height:15px;background:#111;animation:confettiFall 2.8s linear infinite;animation-delay:calc(var(--i) * -0.1s);transform:rotate(calc(var(--i) * 23deg))}.confetti i:nth-child(3n){background:#f6e85f}.confetti i:nth-child(3n+1){background:#e11d48}.confetti i:nth-child(4n){background:#4b7bec}.successCard{position:relative;overflow:hidden}.successCard>*:not(.confetti){position:relative;z-index:1}.successIcon{width:70px;',
+              1,
+          )
+          x = x.replace(
+              '@media(max-width:900px){',
+              '@keyframes confettiFall{0%{transform:translateY(-30px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(620deg);opacity:.15}}@media(prefers-reduced-motion:reduce){.confetti i{animation:none;display:none}}@media(max-width:900px){',
+              1,
+          )
+          checkout.write_text(x, encoding='utf-8')
+          print('RETROMART UX upgrades applied')
           PY
 
       - name: Validate production build
@@ -127,14 +184,14 @@ jobs:
           npm ci
           npm run build
 
-      - name: Commit fixes
+      - name: Commit applied changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add lib/products.ts app/page.tsx
+          git add app/page.tsx app/cart/page.tsx app/checkout/page.tsx
           if git diff --cached --quiet; then
-            echo "No catalog changes needed"
+            echo "No changes needed"
             exit 0
           fi
-          git commit -m "fix: correct product categories and add desktop PC"
+          git commit -m "feat: improve category scroll and virtual checkout experience"
           git push
