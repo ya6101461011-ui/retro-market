@@ -1,17 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { clearCart, getCart } from "@/lib/cart";
 import { getProductById } from "@/lib/products";
 
-type CartItem = {
-  productId: string;
-  quantity: number;
-  selectedOptions?: Record<string, string>;
-};
+type CartItem = ReturnType<typeof getCart>[number];
 
-const fallbackImage = "https://images.unsplash.com/photo-1560393464-5c69a73c5770?w=1000&q=85";
+const FALLBACK_IMAGE =
+  "https://images.unsplash.com/photo-1560393464-5c69a73c5770?w=800&q=80";
 
 export default function CheckoutPage() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -31,33 +28,83 @@ export default function CheckoutPage() {
     setLoaded(true);
   }, []);
 
-  const products = cartItems
-    .map((item) => {
-      const product = getProductById(item.productId);
-      return product ? { ...item, product } : null;
-    })
-    .filter((item): item is NonNullable<typeof item> => item !== null);
+  const products = useMemo(() => {
+    return cartItems
+      .map((item) => {
+        const product = getProductById(item.productId);
+        return product ? { ...item, product } : null;
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null);
+  }, [cartItems]);
 
-  const total = products.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-  const totalQuantity = products.reduce((sum, item) => sum + item.quantity, 0);
+  const total = products.reduce(
+    (sum, item) => sum + item.product.price * item.quantity,
+    0
+  );
+  const totalQuantity = products.reduce(
+    (sum, item) => sum + item.quantity,
+    0
+  );
 
-  function submitOrder(event: React.FormEvent) {
-    event.preventDefault();
-    if (submitting) return;
-
+  function validateForm() {
     if (!name.trim() || !phone.trim() || !email.trim() || !address.trim()) {
       alert("請完整填寫收件資訊。");
+      return false;
+    }
+
+    if (!/^09\d{8}$/.test(phone.trim())) {
+      alert("請輸入正確的台灣手機號碼，例如 0912345678。");
+      return false;
+    }
+
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
+      alert("請輸入正確的 Email。");
+      return false;
+    }
+
+    return true;
+  }
+
+  function submitOrder(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (submitting || !validateForm()) return;
+
+    const latestCart = getCart();
+    const latestProducts = latestCart
+      .map((item) => {
+        const product = getProductById(item.productId);
+        return product ? { ...item, product } : null;
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null);
+
+    if (latestProducts.length === 0) {
+      alert("購物車目前沒有商品。");
+      setCartItems([]);
       return;
     }
 
-    if (products.length === 0) {
-      alert("購物車目前沒有商品。");
+    const stockProblem = latestProducts.find(
+      (item) => item.quantity > item.product.stock || item.product.stock <= 0
+    );
+
+    if (stockProblem) {
+      alert(`「${stockProblem.product.name}」庫存不足，請回購物車調整數量。`);
+      setCartItems(getCart());
       return;
     }
+
+    const latestTotal = latestProducts.reduce(
+      (sum, item) => sum + item.product.price * item.quantity,
+      0
+    );
+    const latestQuantity = latestProducts.reduce(
+      (sum, item) => sum + item.quantity,
+      0
+    );
 
     setSubmitting(true);
-    setOrderTotal(total);
-    setOrderQuantity(totalQuantity);
+    setOrderTotal(latestTotal);
+    setOrderQuantity(latestQuantity);
     setOrderNumber(`RM${Date.now().toString().slice(-8)}`);
     clearCart();
     setCartItems([]);
@@ -129,10 +176,10 @@ export default function CheckoutPage() {
         <form onSubmit={submitOrder} className="card">
           <h2>收件資訊</h2>
           <div className="fields">
-            <label>收件人<input value={name} onChange={(e) => setName(e.target.value)} placeholder="請輸入姓名" autoComplete="name" required /></label>
-            <label>電話<input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="請輸入手機號碼" inputMode="tel" autoComplete="tel" required /></label>
-            <label>Email<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="example@email.com" autoComplete="email" required /></label>
-            <label>收件地址<input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="請輸入收件地址" autoComplete="street-address" required /></label>
+            <label>收件人<input value={name} onChange={(e) => setName(e.target.value)} placeholder="請輸入姓名" autoComplete="name" maxLength={40} required /></label>
+            <label>電話<input value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))} placeholder="0912345678" inputMode="tel" autoComplete="tel" maxLength={10} required /></label>
+            <label>Email<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="example@email.com" autoComplete="email" maxLength={120} required /></label>
+            <label>收件地址<input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="請輸入收件地址" autoComplete="street-address" maxLength={150} required /></label>
           </div>
 
           <h2 className="paymentTitle">付款方式</h2>
@@ -155,7 +202,7 @@ export default function CheckoutPage() {
               const optionsText = Object.entries(item.selectedOptions || {}).map(([key, value]) => `${key}：${value}`).join(" / ");
               return (
                 <div key={item.product.id + JSON.stringify(item.selectedOptions)} className="item">
-                  <img src={item.product.image} alt={item.product.name} onError={(e) => { if (e.currentTarget.src !== fallbackImage) e.currentTarget.src = fallbackImage; }} />
+                  <img src={item.product.image} alt={item.product.name} onError={(e) => { if (e.currentTarget.src !== FALLBACK_IMAGE) e.currentTarget.src = FALLBACK_IMAGE; }} />
                   <div className="itemInfo">
                     <strong>{item.product.name}</strong>
                     {optionsText && <span>{optionsText}</span>}
