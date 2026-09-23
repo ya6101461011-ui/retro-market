@@ -22,6 +22,8 @@ const eslintConfig = defineConfig([
       "react-hooks/set-state-in-effect": "off",
       // Storage parsing intentionally ignores malformed persisted data.
       "no-empty": "off",
+      // Product copy contains intentional English punctuation such as "THE INTERNET'S...".
+      "react/no-unescaped-entities": "off",
     },
   },
 ]);
