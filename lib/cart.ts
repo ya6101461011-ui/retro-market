@@ -7,127 +7,107 @@ export type CartItem = {
 };
 
 const CART_KEY = "retro-market-cart";
+const CART_EVENT = "cart-updated";
 
-/* =========================
-   取得購物車
-========================= */
-
-export function getCart(): CartItem[] {
-  if (typeof window === "undefined") {
-    return [];
+function normalizeOptions(value: unknown): Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
   }
 
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .filter(([, optionValue]) => typeof optionValue === "string")
+      .map(([key, optionValue]) => [key, optionValue as string])
+  );
+}
+
+function normalizeQuantity(value: unknown): number {
+  const quantity = Number(value);
+  if (!Number.isFinite(quantity)) return 1;
+  return Math.max(1, Math.floor(quantity));
+}
+
+export function getCart(): CartItem[] {
+  if (typeof window === "undefined") return [];
+
   try {
-    const data = localStorage.getItem(CART_KEY);
+    const data = window.localStorage.getItem(CART_KEY);
+    if (!data) return [];
 
-    if (!data) {
-      return [];
-    }
+    const parsed: unknown = JSON.parse(data);
+    if (!Array.isArray(parsed)) return [];
 
-    const parsed = JSON.parse(data);
-
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-
-    return parsed.map((item) => ({
-      productId: String(item.productId),
-      quantity: Number(item.quantity) || 1,
-      selectedOptions: item.selectedOptions || {},
-    }));
+    return parsed
+      .filter(
+        (item): item is Record<string, unknown> =>
+          !!item && typeof item === "object" && !Array.isArray(item)
+      )
+      .map((item) => ({
+        productId: String(item.productId ?? ""),
+        quantity: normalizeQuantity(item.quantity),
+        selectedOptions: normalizeOptions(item.selectedOptions),
+      }))
+      .filter((item) => item.productId.length > 0);
   } catch (error) {
     console.error("讀取購物車失敗:", error);
     return [];
   }
 }
 
-/* =========================
-   儲存購物車
-========================= */
-
 export function saveCart(cart: CartItem[]) {
-  if (typeof window === "undefined") {
-    return;
-  }
+  if (typeof window === "undefined") return;
 
   try {
-    localStorage.setItem(
-      CART_KEY,
-      JSON.stringify(cart)
-    );
-
-    // 通知網站其他地方購物車更新
-    window.dispatchEvent(
-      new Event("cart-updated")
-    );
+    window.localStorage.setItem(CART_KEY, JSON.stringify(cart));
+    window.dispatchEvent(new Event(CART_EVENT));
   } catch (error) {
     console.error("儲存購物車失敗:", error);
   }
 }
 
-/* =========================
-   比較商品選項
-========================= */
-
 function sameOptions(
   a: Record<string, string> = {},
   b: Record<string, string> = {}
 ) {
-  const keysA = Object.keys(a);
-  const keysB = Object.keys(b);
+  const keysA = Object.keys(a).sort();
+  const keysB = Object.keys(b).sort();
 
-  if (keysA.length !== keysB.length) {
-    return false;
-  }
+  if (keysA.length !== keysB.length) return false;
 
-  return keysA.every(
-    (key) => a[key] === b[key]
-  );
+  return keysA.every((key, index) => {
+    const otherKey = keysB[index];
+    return key === otherKey && a[key] === b[otherKey];
+  });
 }
-
-/* =========================
-   加入購物車
-========================= */
 
 export function addToCart(
   product: Product,
   selectedOptions: Record<string, string> = {}
 ) {
   const cart = getCart();
+  const safeOptions = normalizeOptions(selectedOptions);
 
   const existingItem = cart.find(
     (item) =>
       item.productId === product.id &&
-      sameOptions(
-        item.selectedOptions,
-        selectedOptions
-      )
+      sameOptions(item.selectedOptions, safeOptions)
   );
 
   if (existingItem) {
-    existingItem.quantity += 1;
+    existingItem.quantity = Math.min(
+      product.stock,
+      existingItem.quantity + 1
+    );
   } else {
     cart.push({
       productId: product.id,
       quantity: 1,
-      selectedOptions: {
-        ...selectedOptions,
-      },
+      selectedOptions: safeOptions,
     });
   }
 
   saveCart(cart);
-
-  console.log(
-    "已加入購物車:",
-    product.name,
-    selectedOptions
-  );
 }
-
-/* =========================
-   修改數量
-========================= */
 
 export function updateCartQuantity(
   productId: string,
@@ -135,104 +115,66 @@ export function updateCartQuantity(
   selectedOptions: Record<string, string> = {}
 ) {
   const cart = getCart();
-
   const item = cart.find(
-    (item) =>
-      item.productId === productId &&
-      sameOptions(
-        item.selectedOptions,
-        selectedOptions
-      )
+    (cartItem) =>
+      cartItem.productId === productId &&
+      sameOptions(cartItem.selectedOptions, selectedOptions)
   );
 
-  if (!item) {
-    return;
-  }
+  if (!item) return;
+
+  const product = getProductById(productId);
 
   if (quantity <= 0) {
-    removeFromCart(
-      productId,
-      selectedOptions
-    );
+    removeFromCart(productId, selectedOptions);
     return;
   }
 
-  item.quantity = quantity;
+  item.quantity = product
+    ? Math.min(product.stock, Math.floor(quantity))
+    : Math.floor(quantity);
+
+  if (item.quantity <= 0) {
+    removeFromCart(productId, selectedOptions);
+    return;
+  }
 
   saveCart(cart);
 }
-
-/* =========================
-   移除商品
-========================= */
 
 export function removeFromCart(
   productId: string,
   selectedOptions: Record<string, string> = {}
 ) {
   const cart = getCart();
-
   const newCart = cart.filter(
     (item) =>
       !(
         item.productId === productId &&
-        sameOptions(
-          item.selectedOptions,
-          selectedOptions
-        )
+        sameOptions(item.selectedOptions, selectedOptions)
       )
   );
 
   saveCart(newCart);
 }
 
-/* =========================
-   清空購物車
-========================= */
-
 export function clearCart() {
   saveCart([]);
 }
 
-/* =========================
-   購物車商品數量
-========================= */
-
 export function getCartCount() {
-  const cart = getCart();
-
-  return cart.reduce(
-    (total, item) =>
-      total + item.quantity,
-    0
-  );
+  return getCart().reduce((total, item) => total + item.quantity, 0);
 }
-
-/* =========================
-   取得購物車商品
-========================= */
 
 export function getCartProducts() {
-  const cart = getCart();
-
-  return cart
+  return getCart()
     .map((item) => {
-      const product =
-        getProductById(item.productId);
-
-      if (!product) {
-        return null;
-      }
-
-      return {
-        ...item,
-        product,
-      };
+      const product = getProductById(item.productId);
+      return product ? { ...item, product } : null;
     })
     .filter(
-      (
-        item
-      ): item is NonNullable<typeof item> =>
-        item !== null
+      (item): item is NonNullable<typeof item> => item !== null
     );
 }
+
+export const CART_UPDATED_EVENT = CART_EVENT;
