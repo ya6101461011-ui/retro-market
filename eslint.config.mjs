@@ -7,12 +7,23 @@ const eslintConfig = defineConfig([
   ...nextTs,
   // Override default ignores of eslint-config-next.
   globalIgnores([
-    // Default ignores of eslint-config-next:
     ".next/**",
     "out/**",
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    rules: {
+      // RETROMART uses plain <img> so that product image URLs can gracefully
+      // fall back at runtime when an external image is unavailable.
+      "@next/next/no-img-element": "off",
+      // These client pages intentionally synchronize localStorage/sessionStorage
+      // state after mount.
+      "react-hooks/set-state-in-effect": "off",
+      // Storage parsing intentionally ignores malformed persisted data.
+      "no-empty": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;
