@@ -34,7 +34,6 @@ function normalizeOptions(
     if (selected && option.values.includes(selected)) {
       normalized[option.name] = selected;
     } else if (option.values.length > 0) {
-      // 若舊購物車沒有儲存規格，補上商品頁的第一個預設值。
       normalized[option.name] = option.values[0];
     }
   }
@@ -100,6 +99,33 @@ function normalizeCartItem(item: unknown): CartItem | null {
   };
 }
 
+function mergeCartItems(items: CartItem[]): CartItem[] {
+  const merged: CartItem[] = [];
+
+  for (const item of items) {
+    const existing = merged.find(
+      (candidate) =>
+        candidate.productId === item.productId &&
+        sameOptions(candidate.selectedOptions, item.selectedOptions)
+    );
+
+    if (!existing) {
+      merged.push({ ...item });
+      continue;
+    }
+
+    const product = getProductById(item.productId);
+    const stock = product?.stock ?? existing.quantity;
+
+    existing.quantity = Math.min(
+      stock,
+      existing.quantity + item.quantity
+    );
+  }
+
+  return merged.filter((item) => item.quantity > 0);
+}
+
 export function getCart(): CartItem[] {
   if (typeof window === "undefined") {
     return [];
@@ -118,11 +144,12 @@ export function getCart(): CartItem[] {
       return [];
     }
 
-    const normalized = parsed
-      .map(normalizeCartItem)
-      .filter((item): item is CartItem => item !== null);
+    const normalized = mergeCartItems(
+      parsed
+        .map(normalizeCartItem)
+        .filter((item): item is CartItem => item !== null)
+    );
 
-    // 清理過期商品、無效規格與超出庫存的舊資料。
     if (JSON.stringify(normalized) !== JSON.stringify(parsed)) {
       window.localStorage.setItem(
         CART_KEY,
@@ -143,9 +170,11 @@ export function saveCart(cart: CartItem[]) {
   }
 
   try {
-    const normalizedCart = cart
-      .map(normalizeCartItem)
-      .filter((item): item is CartItem => item !== null);
+    const normalizedCart = mergeCartItems(
+      cart
+        .map(normalizeCartItem)
+        .filter((item): item is CartItem => item !== null)
+    );
 
     window.localStorage.setItem(
       CART_KEY,
