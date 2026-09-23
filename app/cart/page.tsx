@@ -221,10 +221,14 @@ export default function CartPage() {
         .summaryRow,.grandTotal { display:flex; align-items:center; justify-content:space-between; gap:15px; }
         .summaryRow { margin-top:15px; color:#666; }
         .summary hr { margin:25px 0; border:0; border-top:1px solid #ddd; }
-        .grandTotal strong { font-size:25px; } .summary::before{content:"💰 本次虛擬購物完全免費";display:block;margin-bottom:14px;padding:8px 10px;background:#f6e85f;color:#111;border-radius:7px;font-size:11px;font-weight:900;text-align:center}
+        .grandTotal strong { font-size:25px; }
+        .summary::before { content:"💰 本次虛擬購物完全免費"; display:block; margin-bottom:14px; padding:8px 10px; background:#f6e85f; color:#111; border-radius:7px; font-size:11px; font-weight:900; text-align:center; }
         .checkout,.primary { display:block; padding:17px; background:#111; color:#fff; border-radius:9px; text-align:center; text-decoration:none; font-weight:800; }
-        .checkout { margin-top:25px; position:relative; overflow:hidden; } .checkout::after{content:"⚡ 虛擬刷卡 0 元";display:block;margin-top:5px;font-size:10px;font-weight:500;color:#aaa}
-        .checkout:hover,.primary:hover { background:#333; }
+        .checkout { margin-top:25px; min-height:66px; padding:18px 20px; font-size:18px; line-height:1.35; letter-spacing:.3px; box-shadow:0 5px 14px rgba(0,0,0,.14); transition:transform .15s ease,background .15s ease,box-shadow .15s ease; }
+        .checkout::after { content:"⚡ 虛擬刷卡 0 元"; display:block; margin-top:6px; font-size:11px; font-weight:500; color:#aaa; }
+        .checkout:hover { background:#333; transform:translateY(-1px); box-shadow:0 7px 18px rgba(0,0,0,.2); }
+        .checkout:focus-visible { outline:3px solid #f6e85f; outline-offset:3px; }
+        .primary:hover { background:#333; }
         .note { margin:16px 0 0; color:#999; font-size:12px; line-height:1.6; }
         .empty { width:min(700px,calc(100% - 30px)); margin:40px auto 120px; padding:70px 30px; text-align:center; }
         .emptyIcon { font-size:60px; }
@@ -232,7 +236,7 @@ export default function CartPage() {
         .empty p { color:#777; }
         .primary { width:max-content; margin:20px auto 0; padding:14px 28px; }
         @media(max-width:900px) { .content { grid-template-columns:1fr; } .summary { position:static; } }
-        @media(max-width:600px) { .header { height:68px; padding:0 15px; } .logo { font-size:21px; } .continue { font-size:13px; } .titleWrap,.content { width:calc(100% - 30px); } .titleWrap { padding:40px 0 20px; } h1 { font-size:38px; } .item { grid-template-columns:80px minmax(0,1fr); gap:14px; padding:18px 15px; } .imageLink { width:80px; height:80px; } .itemTotal { grid-column:2; justify-self:start; font-size:16px; margin-top:-5px; } .name { font-size:16px; } .controls { gap:8px; } .listHeader { padding:0 15px; } .summary { padding:20px; } .empty { padding:55px 20px; } }
+        @media(max-width:600px) { .header { height:68px; padding:0 15px; } .logo { font-size:21px; } .continue { font-size:13px; } .titleWrap,.content { width:calc(100% - 30px); } .titleWrap { padding:40px 0 20px; } h1 { font-size:38px; } .item { grid-template-columns:80px minmax(0,1fr); gap:14px; padding:18px 15px; } .imageLink { width:80px; height:80px; } .itemTotal { grid-column:2; justify-self:start; font-size:16px; margin-top:-5px; } .name { font-size:16px; } .controls { gap:8px; } .listHeader { padding:0 15px; } .summary { padding:20px; } .checkout { min-height:70px; padding:19px 18px; font-size:19px; border-radius:10px; } .checkout::after { font-size:11px; margin-top:6px; } .empty { padding:55px 20px; } }
       `}</style>
     </main>
   );
