@@ -111,6 +111,15 @@ jobs:
               text = text.replace(marker, desktop + marker, 1)
 
           products.write_text(text, encoding='utf-8')
+
+          page = Path('app/page.tsx')
+          page_text = page.read_text(encoding='utf-8')
+          page_text = page_text.replace(
+              '  "手機",\n  "筆電",',
+              '  "手機",\n  "電腦",\n  "筆電",',
+              1,
+          )
+          page.write_text(page_text, encoding='utf-8')
           print('Catalog fixes applied')
           PY
 
@@ -123,7 +132,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add lib/products.ts
+          git add lib/products.ts app/page.tsx
           if git diff --cached --quiet; then
             echo "No catalog changes needed"
             exit 0
