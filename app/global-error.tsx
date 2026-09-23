@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 export default function GlobalError() {
   return (
     <html lang="zh-Hant-TW">
@@ -25,7 +27,7 @@ export default function GlobalError() {
             <p style={{ color: "#777", lineHeight: 1.8 }}>
               網站發生無法恢復的錯誤，請重新整理頁面後再試一次。
             </p>
-            <a
+            <Link
               href="/"
               style={{
                 display: "inline-block",
@@ -39,7 +41,7 @@ export default function GlobalError() {
               }}
             >
               回到首頁
-            </a>
+            </Link>
           </section>
         </main>
       </body>
