@@ -1,81 +1,106 @@
-"use client";
-
 import Link from "next/link";
 
 export default function NotFound() {
   return (
-    <main className="page">
-      <section className="card">
-        <div className="code">404</div>
-        <div className="eyebrow">PAGE NOT FOUND</div>
-        <h1>找不到這個頁面</h1>
-        <p>你要找的商品或頁面可能已不存在，或網址輸入錯誤。</p>
-        <div className="actions">
-          <Link href="/" className="primary">回到首頁</Link>
-          <Link href="/cart" className="secondary">查看購物車</Link>
+    <main
+      style={{
+        minHeight: "100vh",
+        display: "grid",
+        placeItems: "center",
+        padding: "24px",
+        background: "#f5f5f3",
+        color: "#111",
+        fontFamily: 'Arial, "Noto Sans TC", "Microsoft JhengHei", sans-serif',
+      }}
+    >
+      <section
+        style={{
+          width: "min(680px, 100%)",
+          padding: "clamp(40px, 8vw, 80px) 30px",
+          textAlign: "center",
+          background: "#fff",
+          borderRadius: "20px",
+          boxShadow: "0 20px 60px rgba(0,0,0,.08)",
+        }}
+      >
+        <div
+          style={{
+            fontSize: "clamp(72px, 16vw, 150px)",
+            lineHeight: ".85",
+            fontWeight: 900,
+            letterSpacing: "-8px",
+          }}
+        >
+          404
+        </div>
+        <div
+          style={{
+            marginTop: "25px",
+            color: "#999",
+            fontSize: "11px",
+            letterSpacing: "3px",
+            fontWeight: 800,
+          }}
+        >
+          PAGE NOT FOUND
+        </div>
+        <h1
+          style={{
+            margin: "12px 0 10px",
+            fontSize: "clamp(30px, 6vw, 48px)",
+            letterSpacing: "-2px",
+          }}
+        >
+          找不到這個頁面
+        </h1>
+        <p
+          style={{
+            margin: "0 auto",
+            maxWidth: "460px",
+            color: "#777",
+            lineHeight: 1.8,
+          }}
+        >
+          你要找的商品或頁面可能已不存在，或網址輸入錯誤。
+        </p>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: "10px",
+            flexWrap: "wrap",
+            marginTop: "30px",
+          }}
+        >
+          <Link
+            href="/"
+            style={{
+              padding: "13px 20px",
+              borderRadius: "9px",
+              textDecoration: "none",
+              fontWeight: 800,
+              background: "#111",
+              color: "#fff",
+            }}
+          >
+            回到首頁
+          </Link>
+          <Link
+            href="/cart"
+            style={{
+              padding: "13px 20px",
+              borderRadius: "9px",
+              textDecoration: "none",
+              fontWeight: 800,
+              border: "1px solid #ccc",
+              color: "#111",
+              background: "#fff",
+            }}
+          >
+            查看購物車
+          </Link>
         </div>
       </section>
-
-      <style jsx>{`
-        .page {
-          min-height: 100vh;
-          display: grid;
-          place-items: center;
-          padding: 24px;
-          background: #f5f5f3;
-          color: #111;
-          font-family: Arial, "Noto Sans TC", "Microsoft JhengHei", sans-serif;
-        }
-        .card {
-          width: min(680px, 100%);
-          padding: clamp(40px, 8vw, 80px) 30px;
-          text-align: center;
-          background: #fff;
-          border-radius: 20px;
-          box-shadow: 0 20px 60px rgba(0,0,0,.08);
-        }
-        .code {
-          font-size: clamp(72px, 16vw, 150px);
-          line-height: .85;
-          font-weight: 900;
-          letter-spacing: -8px;
-        }
-        .eyebrow {
-          margin-top: 25px;
-          color: #999;
-          font-size: 11px;
-          letter-spacing: 3px;
-          font-weight: 800;
-        }
-        h1 {
-          margin: 12px 0 10px;
-          font-size: clamp(30px, 6vw, 48px);
-          letter-spacing: -2px;
-        }
-        p {
-          margin: 0 auto;
-          max-width: 460px;
-          color: #777;
-          line-height: 1.8;
-        }
-        .actions {
-          display: flex;
-          justify-content: center;
-          gap: 10px;
-          flex-wrap: wrap;
-          margin-top: 30px;
-        }
-        .primary, .secondary {
-          padding: 13px 20px;
-          border-radius: 9px;
-          text-decoration: none;
-          font-weight: 800;
-        }
-        .primary { background: #111; color: #fff; }
-        .secondary { border: 1px solid #ccc; color: #111; background: #fff; }
-        .primary:hover { background: #333; }
-        .secondary:hover { border-color: #111; }
-      `}</style>
     </main>
   );
 }
