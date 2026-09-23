@@ -21,7 +21,7 @@ const paramToCategory = Object.fromEntries(
   Object.entries(categoryToParam).map(([name, param]) => [param, name])
 );
 
-const fallbackImage = "https://images.unsplash.com/photo-1560393464-5c69a73c5770?w=1000&q=85";
+const fallbackImage = "https://www.apple.com/v/ipad-air/ah/images/overview/hero/hero_endframe__6gl84bccyaqi_large.png";
 
 function money(value: number) {
   return new Intl.NumberFormat("zh-TW").format(value);
