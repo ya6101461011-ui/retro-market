@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect } from "react";
 
 export default function Error({
@@ -24,9 +25,9 @@ export default function Error({
           <button type="button" className="primary" onClick={() => reset()}>
             重新載入
           </button>
-          <a className="secondary" href="/">
+          <Link className="secondary" href="/">
             回到首頁
-          </a>
+          </Link>
         </div>
       </section>
 
