@@ -48,6 +48,34 @@ function sameOptions(
   });
 }
 
+function normalizeCartItem(item: unknown): CartItem | null {
+  if (!item || typeof item !== "object" || Array.isArray(item)) {
+    return null;
+  }
+
+  const raw = item as Record<string, unknown>;
+  const productId = String(raw.productId ?? "");
+
+  if (!productId) {
+    return null;
+  }
+
+  const product = getProductById(productId);
+
+  if (!product || product.stock <= 0) {
+    return null;
+  }
+
+  return {
+    productId,
+    quantity: Math.min(
+      product.stock,
+      normalizeQuantity(raw.quantity)
+    ),
+    selectedOptions: normalizeOptions(raw.selectedOptions),
+  };
+}
+
 export function getCart(): CartItem[] {
   if (typeof window === "undefined") {
     return [];
@@ -67,18 +95,8 @@ export function getCart(): CartItem[] {
     }
 
     return parsed
-      .filter(
-        (item): item is Record<string, unknown> =>
-          !!item &&
-          typeof item === "object" &&
-          !Array.isArray(item)
-      )
-      .map((item) => ({
-        productId: String(item.productId ?? ""),
-        quantity: normalizeQuantity(item.quantity),
-        selectedOptions: normalizeOptions(item.selectedOptions),
-      }))
-      .filter((item) => item.productId.length > 0);
+      .map(normalizeCartItem)
+      .filter((item): item is CartItem => item !== null);
   } catch (error) {
     console.error("讀取購物車失敗:", error);
     return [];
@@ -91,7 +109,15 @@ export function saveCart(cart: CartItem[]) {
   }
 
   try {
-    window.localStorage.setItem(CART_KEY, JSON.stringify(cart));
+    const normalizedCart = cart
+      .map(normalizeCartItem)
+      .filter((item): item is CartItem => item !== null);
+
+    window.localStorage.setItem(
+      CART_KEY,
+      JSON.stringify(normalizedCart)
+    );
+
     window.dispatchEvent(new Event(CART_EVENT));
   } catch (error) {
     console.error("儲存購物車失敗:", error);
@@ -103,6 +129,10 @@ export function addToCart(
   selectedOptions: Record<string, string> = {},
   quantity = 1
 ) {
+  if (product.stock <= 0) {
+    return false;
+  }
+
   const cart = getCart();
   const safeOptions = normalizeOptions(selectedOptions);
   const safeQuantity = Math.min(
@@ -110,8 +140,8 @@ export function addToCart(
     normalizeQuantity(quantity)
   );
 
-  if (product.stock <= 0 || safeQuantity <= 0) {
-    return;
+  if (safeQuantity <= 0) {
+    return false;
   }
 
   const existingItem = cart.find(
@@ -121,10 +151,16 @@ export function addToCart(
   );
 
   if (existingItem) {
-    existingItem.quantity = Math.min(
+    const nextQuantity = Math.min(
       product.stock,
       existingItem.quantity + safeQuantity
     );
+
+    if (nextQuantity === existingItem.quantity) {
+      return false;
+    }
+
+    existingItem.quantity = nextQuantity;
   } else {
     cart.push({
       productId: product.id,
@@ -134,6 +170,7 @@ export function addToCart(
   }
 
   saveCart(cart);
+  return true;
 }
 
 export function updateCartQuantity(
