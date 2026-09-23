@@ -37,6 +37,32 @@ jobs:
           p = p.replace('"全部", "手機", "筆電", "顯卡", "電視", "電玩", "相機", "空拍機",', '"全部", "手機", "平板", "筆電", "電腦", "顯示器", "顯卡", "電視", "電玩", "相機", "空拍機",', 1)
           p = p.replace('全部: "all", 手機: "phone", 筆電: "laptop", 顯卡:', '全部: "all", 手機: "phone", 平板: "tablet", 筆電: "laptop", 電腦: "computer", 顯示器: "display", 顯卡:', 1)
           page.write_text(p, encoding='utf-8')
+
+          # Apple 官方網站的商品頁圖片，避免失效 CDN URL 掉回紅酒杯假圖。
+          apple = Path('lib/apple-products.ts')
+          a = apple.read_text(encoding='utf-8')
+          replacements = {
+              'https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/ipad-air-11-select-202503?wid=1200&hei=1200&fmt=png-alpha': 'https://www.apple.com/v/ipad-air/ah/images/overview/hero/hero_endframe__6gl84bccyaqi_large.png',
+              'https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/ipad-air-13-select-202503?wid=1200&hei=1200&fmt=png-alpha': 'https://www.apple.com/tw/ipad-air/images/overview/two-sizes/gallery-toggle/spin_reverse_endframe__crvqft16efue_large.png',
+              'https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/ipad-11-select-202503?wid=1200&hei=1200&fmt=png-alpha': 'https://www.apple.com/tw/ipad-11/images/overview/hero/hero__crzh9misvcuq_large.jpg',
+              'https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/macbook-neo-select-202603?wid=1200&hei=1200&fmt=png-alpha': 'https://www.apple.com/v/macbook-neo/b/images/overview/welcome/hero_endframe__c62q483im5si_xlarge.jpg',
+              'https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/mba15-m4-starlight-gallery1-202503?wid=1200&hei=1200&fmt=png-alpha': 'https://www.apple.com/v/macbook-air/z/images/overview/hero/hero_startframe__c0rhv2ultfau_large.png',
+              'https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/mbp14-m5-spaceblack-gallery1-202510?wid=1200&hei=1200&fmt=png-alpha': 'https://www.apple.com/v/macbook-pro/ax/images/overview/welcome/hero_endframe__fwev9ebh42mq_xlarge.jpg',
+              'https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/mbp16-m5-spaceblack-gallery1-202510?wid=1200&hei=1200&fmt=png-alpha': 'https://www.apple.com/v/macbook-pro/ax/images/overview/welcome/hero_endframe__fwev9ebh42mq_xlarge.jpg',
+              'https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-air-finish-select-202509-skyblue_FMT_WHH?wid=1280&hei=1280&fmt=p-jpg&qlt=90': 'https://www.apple.com/v/iphone-air/f/images/overview/welcome/hero__c8vidxwr9imq_xlarge.jpg',
+              'https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/iphone-17-finish-select-lavender-202509_GEO_US?wid=1200&hei=1200&fmt=png-alpha': 'https://www.apple.com/tw/iphone-17/images/overview/welcome/hero_startframe__e9e7pcnguyqi_xlarge.webp',
+          }
+          for old, new in replacements.items():
+              a = a.replace(old, new)
+          apple.write_text(a, encoding='utf-8')
+
+          # 讓任何仍然失效的 Apple 圖片也不會再顯示舊的紅酒杯 fallback。
+          p = page.read_text(encoding='utf-8')
+          p = p.replace(
+              'const fallbackImage = "https://images.unsplash.com/photo-1560393464-5c69a73c5770?w=1000&q=85";',
+              'const fallbackImage = "https://www.apple.com/v/ipad-air/ah/images/overview/hero/hero_endframe__6gl84bccyaqi_large.png";'
+          )
+          page.write_text(p, encoding='utf-8')
           PY
 
       - name: Validate production build
@@ -48,10 +74,10 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add lib/products.ts app/page.tsx
+          git add lib/products.ts app/page.tsx lib/apple-products.ts
           if git diff --cached --quiet; then
             echo "No integration changes needed"
             exit 0
           fi
-          git commit -m "feat: integrate Apple catalog and categories"
+          git commit -m "fix: repair Apple product image URLs"
           git push
