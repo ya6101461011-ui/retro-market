@@ -1,3 +1,5 @@
+"use client";
+
 export default function Loading() {
   return (
     <main className="loading" aria-label="載入中">
