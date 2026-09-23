@@ -221,9 +221,9 @@ export default function CartPage() {
         .summaryRow,.grandTotal { display:flex; align-items:center; justify-content:space-between; gap:15px; }
         .summaryRow { margin-top:15px; color:#666; }
         .summary hr { margin:25px 0; border:0; border-top:1px solid #ddd; }
-        .grandTotal strong { font-size:25px; }
+        .grandTotal strong { font-size:25px; } .summary::before{content:"💰 本次虛擬購物完全免費";display:block;margin-bottom:14px;padding:8px 10px;background:#f6e85f;color:#111;border-radius:7px;font-size:11px;font-weight:900;text-align:center}
         .checkout,.primary { display:block; padding:17px; background:#111; color:#fff; border-radius:9px; text-align:center; text-decoration:none; font-weight:800; }
-        .checkout { margin-top:25px; }
+        .checkout { margin-top:25px; position:relative; overflow:hidden; } .checkout::after{content:"⚡ 虛擬刷卡 0 元";display:block;margin-top:5px;font-size:10px;font-weight:500;color:#aaa}
         .checkout:hover,.primary:hover { background:#333; }
         .note { margin:16px 0 0; color:#999; font-size:12px; line-height:1.6; }
         .empty { width:min(700px,calc(100% - 30px)); margin:40px auto 120px; padding:70px 30px; text-align:center; }
