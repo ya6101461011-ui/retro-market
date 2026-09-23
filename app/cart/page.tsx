@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   clearCart,
   getCart,
@@ -19,8 +20,11 @@ const FALLBACK_IMAGE =
   "https://images.unsplash.com/photo-1560393464-5c69a73c5770?w=800&q=80";
 
 export default function CartPage() {
+  const router = useRouter();
   const [items, setItems] = useState<CartItem[]>([]);
   const [ready, setReady] = useState(false);
+  const [giftWrap, setGiftWrap] = useState(false);
+  const [slideValue, setSlideValue] = useState(0);
 
   const refresh = useCallback(() => {
     setItems(getCart());
@@ -53,10 +57,19 @@ export default function CartPage() {
       .filter((item): item is DisplayItem => item !== null);
   }, [items]);
 
-  const total = displayItems.reduce(
+  const subtotal = displayItems.reduce(
     (sum, item) => sum + item.product.price * item.quantity,
     0
   );
+  const originalPrice = displayItems.reduce(
+    (sum, item) => sum + item.product.oldPrice * item.quantity,
+    0
+  );
+  const productSavings = Math.max(0, originalPrice - subtotal);
+  const shipping = 0;
+  const shippingSavings = 0;
+  const tax = 0;
+  const orderTotal = subtotal + shipping + tax;
   const totalQuantity = displayItems.reduce(
     (sum, item) => sum + item.quantity,
     0
@@ -79,6 +92,11 @@ export default function CartPage() {
     if (window.confirm("確定要清空購物車嗎？")) {
       clearCart();
     }
+  }
+
+  function completeSlide() {
+    if (slideValue < 100 || displayItems.length === 0) return;
+    router.push("/checkout");
   }
 
   if (!ready) {
@@ -163,24 +181,100 @@ export default function CartPage() {
             })}
           </div>
 
-          <aside className="summary card">
-            <h2>訂單摘要</h2>
-            <div className="summaryRow"><span>商品數量</span><strong>{totalQuantity} 件</strong></div>
-            <div className="summaryRow"><span>商品小計</span><strong>NT${total.toLocaleString()}</strong></div>
-            <div className="summaryRow"><span>運費</span><strong>NT$0</strong></div>
-            <hr />
-            <div className="grandTotal"><span>總計</span><strong>NT${total.toLocaleString()}</strong></div>
+          <aside className="summaryColumn">
+            <div className="freeBanner">💰 本次虛擬購物完全免費</div>
 
-            <Link
-              href="/checkout"
-              className="checkout"
-              aria-label={`前往結帳，訂單總額 NT$${total.toLocaleString()}`}
+            <div className="giftWrap card">
+              <div className="giftIcon">🎁</div>
+              <div className="giftText">
+                <strong>為這次購物加上禮物包裝</strong>
+                <span>免費・幫你的夢幻購物車加上蝴蝶結</span>
+              </div>
+              <button
+                type="button"
+                className={`giftToggle ${giftWrap ? "active" : ""}`}
+                onClick={() => setGiftWrap((value) => !value)}
+                aria-pressed={giftWrap}
+                aria-label="切換免費禮物包裝"
+              >
+                <span />
+              </button>
+            </div>
+
+            <div className="summary card">
+              <h2>訂單摘要</h2>
+
+              <div className="summaryRow">
+                <span>商品數量</span>
+                <strong>{totalQuantity} 件</strong>
+              </div>
+
+              <div className="summaryRow">
+                <span>原價</span>
+                <strong className="strike">NT${originalPrice.toLocaleString()}</strong>
+              </div>
+
+              <div className="summaryRow saving">
+                <span>商品省下</span>
+                <strong>−NT${productSavings.toLocaleString()}</strong>
+              </div>
+
+              <div className="summaryRow">
+                <span>運費</span>
+                <strong>NT${shipping.toLocaleString()}</strong>
+              </div>
+
+              <div className="summaryRow saving">
+                <span>運費省下</span>
+                <strong>−NT${shippingSavings.toLocaleString()}</strong>
+              </div>
+
+              <div className="summaryRow taxRow">
+                <span>虛擬體驗稅</span>
+                <strong>NT${tax.toLocaleString()}</strong>
+              </div>
+
+              <hr />
+
+              <div className="grandTotal">
+                <span>訂單總計</span>
+                <strong>NT${orderTotal.toLocaleString()}</strong>
+              </div>
+
+              <div className="sliderCheckout">
+                <div className="sliderTrack">
+                  <div
+                    className="sliderFill"
+                    style={{ width: `${Math.max(8, slideValue)}%` }}
+                  />
+                  <span className={`sliderText ${slideValue >= 70 ? "hidden" : ""}`}>
+                    滑動確認訂單・NT${orderTotal.toLocaleString()}  »
+                  </span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={slideValue}
+                    onChange={(event) => setSlideValue(Number(event.target.value))}
+                    onMouseUp={completeSlide}
+                    onTouchEnd={completeSlide}
+                    onKeyUp={completeSlide}
+                    aria-label={`滑動確認虛擬訂單，金額 NT$${orderTotal.toLocaleString()}`}
+                  />
+                  <span className="sliderKnob" aria-hidden="true">»</span>
+                </div>
+              </div>
+
+              <p className="returns">免費虛擬體驗・不會產生真實付款或配送</p>
+            </div>
+
+            <button
+              type="button"
+              className="fallbackCheckout"
+              onClick={() => router.push("/checkout")}
             >
-              <span className="checkoutMain">前往結帳 <span aria-hidden="true">→</span></span>
-              <span className="checkoutSub">⚡ 虛擬刷卡・0 元・立即體驗</span>
-            </Link>
-
-            <p className="note">本網站為虛擬購物體驗，不會產生真實付款或配送。</p>
+              不想滑？直接前往虛擬結帳 →
+            </button>
           </aside>
         </section>
       )}
@@ -197,8 +291,8 @@ export default function CartPage() {
         .eyebrow { color:#999; font-size:11px; letter-spacing:3px; font-weight:800; }
         h1 { margin:10px 0 5px; font-size:48px; letter-spacing:-2px; }
         .titleWrap p { margin:0; color:#777; }
-        .content { width:min(1300px,calc(100% - 60px)); margin:0 auto; padding:10px 0 90px; display:grid; grid-template-columns:minmax(0,1fr) 360px; gap:30px; align-items:start; }
-        .card,.empty { background:#fff; border-radius:16px; }
+        .content { width:min(1300px,calc(100% - 60px)); margin:0 auto; padding:10px 0 90px; display:grid; grid-template-columns:minmax(0,1fr) 390px; gap:30px; align-items:start; }
+        .card,.empty { background:#fff; border-radius:18px; }
         .list { overflow:hidden; }
         .listHeader { min-height:68px; padding:0 25px; border-bottom:1px solid #eee; display:flex; align-items:center; justify-content:space-between; }
         .listHeader button { border:0; background:transparent; color:#888; cursor:pointer; }
@@ -221,72 +315,55 @@ export default function CartPage() {
         .remove:hover { color:#e11d48; }
         .stockHint { color:#999; font-size:11px; }
         .itemTotal { white-space:nowrap; font-size:18px; }
-        .summary { padding:25px; position:sticky; top:20px; }
-        .summary h2 { margin:0 0 25px; }
-        .summaryRow,.grandTotal { display:flex; align-items:center; justify-content:space-between; gap:15px; }
-        .summaryRow { margin-top:15px; color:#666; }
-        .summary hr { margin:25px 0; border:0; border-top:1px solid #ddd; }
-        .grandTotal strong { font-size:25px; }
-        .summary::before { content:"💰 本次虛擬購物完全免費"; display:block; margin-bottom:14px; padding:8px 10px; background:#f6e85f; color:#111; border-radius:7px; font-size:11px; font-weight:900; text-align:center; }
 
-        /* 高辨識度結帳 CTA：固定有足夠高度、整塊可點擊、主次文字分明 */
-        .checkout {
-          width:100%;
-          min-height:104px;
-          margin-top:30px;
-          padding:18px 22px;
-          display:flex;
-          flex-direction:column;
-          align-items:center;
-          justify-content:center;
-          gap:7px;
-          background:#111;
-          color:#fff;
-          border:2px solid #111;
-          border-radius:14px;
-          text-align:center;
-          text-decoration:none;
-          font-weight:900;
-          box-shadow:0 8px 0 #d7d7d2,0 14px 28px rgba(0,0,0,.18);
-          cursor:pointer;
-          transition:transform .15s ease,background .15s ease,box-shadow .15s ease;
-        }
-        .checkoutMain {
-          display:block;
-          font-size:25px;
-          line-height:1.15;
-          letter-spacing:.5px;
-        }
-        .checkoutMain span { display:inline-block; margin-left:5px; transition:transform .15s ease; }
-        .checkoutSub {
-          display:block;
-          color:#d8d8d8;
-          font-size:12px;
-          line-height:1.2;
-          font-weight:700;
-          letter-spacing:.2px;
-        }
-        .checkout:hover {
-          background:#292929;
-          transform:translateY(-3px);
-          box-shadow:0 10px 0 #d7d7d2,0 18px 32px rgba(0,0,0,.25);
-        }
-        .checkout:hover .checkoutMain span { transform:translateX(5px); }
-        .checkout:active {
-          transform:translateY(3px);
-          box-shadow:0 4px 0 #d7d7d2,0 8px 16px rgba(0,0,0,.18);
-        }
-        .checkout:focus-visible { outline:4px solid #f6e85f; outline-offset:4px; }
+        .summaryColumn { display:flex; flex-direction:column; gap:12px; position:sticky; top:20px; }
+        .freeBanner { min-height:54px; padding:0 18px; display:flex; align-items:center; justify-content:center; background:#f6e85f; color:#111; border-radius:13px; font-size:13px; font-weight:900; letter-spacing:.2px; box-shadow:0 2px 0 rgba(0,0,0,.08); }
+
+        .giftWrap { min-height:88px; padding:16px 18px; display:flex; align-items:center; gap:13px; border:1px solid #ececec; }
+        .giftIcon { width:40px; height:40px; display:grid; place-items:center; flex:0 0 auto; border-radius:12px; background:#f7f7f5; font-size:22px; }
+        .giftText { min-width:0; flex:1; display:flex; flex-direction:column; gap:5px; }
+        .giftText strong { font-size:14px; }
+        .giftText span { color:#777; font-size:11px; line-height:1.35; }
+        .giftToggle { width:46px; height:28px; padding:3px; flex:0 0 auto; border:0; border-radius:999px; background:#ddd; cursor:pointer; transition:background .2s ease; }
+        .giftToggle span { display:block; width:22px; height:22px; border-radius:50%; background:#fff; box-shadow:0 1px 4px rgba(0,0,0,.18); transition:transform .2s ease; }
+        .giftToggle.active { background:#111; }
+        .giftToggle.active span { transform:translateX(18px); }
+
+        .summary { padding:24px 26px 22px; border:1px solid #ededed; }
+        .summary h2 { margin:0 0 22px; font-size:22px; letter-spacing:-.5px; }
+        .summaryRow,.grandTotal { display:flex; align-items:center; justify-content:space-between; gap:15px; }
+        .summaryRow { margin-top:14px; color:#333; font-size:14px; }
+        .summaryRow strong { font-size:14px; font-weight:700; }
+        .summaryRow .strike { color:#555; text-decoration:line-through; text-decoration-thickness:1.5px; }
+        .summaryRow.saving { color:#258c42; }
+        .summaryRow.saving strong { color:#258c42; }
+        .taxRow { color:#666; }
+        .summary hr { margin:21px 0; border:0; border-top:1px solid #ddd; }
+        .grandTotal { font-size:16px; font-weight:800; }
+        .grandTotal strong { font-size:27px; letter-spacing:-.5px; }
+
+        .sliderCheckout { margin-top:22px; }
+        .sliderTrack { position:relative; height:64px; overflow:hidden; border:3px solid #f2d9d2; border-radius:999px; background:#f5ddd5; box-shadow:inset 0 1px 3px rgba(0,0,0,.05); }
+        .sliderFill { position:absolute; inset:0 auto 0 0; min-width:8%; border-radius:999px; background:#ee4b17; opacity:.16; pointer-events:none; transition:width .08s linear; }
+        .sliderText { position:absolute; inset:0; z-index:2; display:flex; align-items:center; justify-content:center; padding:0 64px 0 58px; color:#b33d1e; font-size:14px; font-weight:900; pointer-events:none; transition:opacity .15s ease; white-space:nowrap; }
+        .sliderText.hidden { opacity:.08; }
+        .sliderTrack input { position:absolute; inset:0; z-index:4; width:100%; height:100%; margin:0; opacity:0; cursor:grab; }
+        .sliderTrack input:active { cursor:grabbing; }
+        .sliderKnob { position:absolute; z-index:3; top:5px; left:5px; width:54px; height:54px; display:grid; place-items:center; border-radius:50%; background:#ed4b12; color:#fff; font-size:28px; font-weight:900; box-shadow:0 2px 5px rgba(0,0,0,.18); pointer-events:none; transition:left .08s linear; }
+        .sliderTrack input { --slider-position: 0%; }
+        .sliderTrack input + .sliderKnob { left:calc(5px + (100% - 64px) * var(--slider-position, 0)); }
+        .returns { margin:12px 0 0; color:#666; font-size:11px; text-align:center; }
+        .fallbackCheckout { border:0; background:transparent; color:#777; font-size:12px; font-weight:700; cursor:pointer; padding:6px; text-decoration:underline; }
+        .fallbackCheckout:hover { color:#111; }
 
         .primary { display:block; padding:17px; background:#111; color:#fff; border-radius:9px; text-align:center; text-decoration:none; font-weight:800; }
         .primary:hover { background:#333; }
-        .note { margin:18px 0 0; color:#999; font-size:12px; line-height:1.6; }
         .empty { width:min(700px,calc(100% - 30px)); margin:40px auto 120px; padding:70px 30px; text-align:center; }
         .emptyIcon { font-size:60px; }
         .empty h2 { margin:15px 0 8px; }
         .empty p { color:#777; }
         .primary { width:max-content; margin:20px auto 0; padding:14px 28px; }
-        @media(max-width:900px) { .content { grid-template-columns:1fr; } .summary { position:static; } }
+        @media(max-width:900px) { .content { grid-template-columns:1fr; } .summaryColumn { position:static; } }
         @media(max-width:600px) {
           .header { height:68px; padding:0 15px; }
           .logo { font-size:21px; }
@@ -300,10 +377,11 @@ export default function CartPage() {
           .name { font-size:16px; }
           .controls { gap:8px; }
           .listHeader { padding:0 15px; }
+          .giftWrap { padding:14px; }
+          .giftText strong { font-size:13px; }
           .summary { padding:20px; }
-          .checkout { min-height:104px; margin-top:25px; padding:18px 16px; border-radius:14px; }
-          .checkoutMain { font-size:23px; }
-          .checkoutSub { font-size:11px; }
+          .grandTotal strong { font-size:24px; }
+          .sliderText { font-size:12px; padding-left:50px; padding-right:52px; }
           .empty { padding:55px 20px; }
         }
       `}</style>
