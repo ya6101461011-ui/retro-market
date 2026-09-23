@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { products } from "../../../lib/products";
-import { addToCart as saveCartItem, getCartCount } from "../../../lib/cart";
+import {
+  addToCart as saveCartItem,
+  getCartCount,
+} from "../../../lib/cart";
 
 type ProductOption = {
   name: string;
@@ -31,23 +34,6 @@ type Product = {
     value: string;
   }[];
   options?: ProductOption[];
-
-  /*
-   * 顏色對應圖片
-   *
-   * 例如：
-   *
-   * colorImages: {
-   *   "鈦原色": [
-   *      "圖片1",
-   *      "圖片2"
-   *   ],
-   *   "黑色": [
-   *      "圖片1",
-   *      "圖片2"
-   *   ]
-   * }
-   */
   colorImages?: Record<string, string[]>;
 };
 
@@ -58,9 +44,21 @@ export default function ProductPage() {
     ? params.id[0]
     : params.id;
 
-  const product = products.find(
+  /*
+   * =====================================================
+   * 找商品
+   * =====================================================
+   */
+
+  const foundProduct = products.find(
     (item) => item.id === id
   ) as Product | undefined;
+
+  /*
+   * =====================================================
+   * STATE
+   * =====================================================
+   */
 
   const [selectedOptions, setSelectedOptions] =
     useState<Record<string, string>>({});
@@ -76,11 +74,11 @@ export default function ProductPage() {
 
   /*
    * =====================================================
-   * 找出目前選擇的顏色
+   * 顏色選項
    * =====================================================
    */
 
-  const colorOption = product?.options?.find(
+  const colorOption = foundProduct?.options?.find(
     (option) =>
       option.name === "顏色" ||
       option.name === "颜色" ||
@@ -97,46 +95,32 @@ export default function ProductPage() {
 
   /*
    * =====================================================
-   * 找目前顏色的圖片
+   * 目前圖片
    * =====================================================
    */
 
   const currentImages = useMemo(() => {
-    if (!product) {
+    if (!foundProduct) {
       return [];
     }
 
-    /*
-     * 如果有設定 colorImages
-     * 就使用該顏色的圖片
-     */
-
     if (
       selectedColor &&
-      product.colorImages &&
-      product.colorImages[selectedColor] &&
-      product.colorImages[selectedColor].length > 0
+      foundProduct.colorImages &&
+      foundProduct.colorImages[selectedColor] &&
+      foundProduct.colorImages[selectedColor].length > 0
     ) {
-      return product.colorImages[selectedColor];
+      return foundProduct.colorImages[selectedColor];
     }
 
-    /*
-     * 沒有顏色圖片時
-     * 使用原本 images
-     */
-
-    return product.images?.length
-      ? product.images
-      : [product.image];
-  }, [
-    product,
-    selectedColor,
-  ]);
+    return foundProduct.images?.length
+      ? foundProduct.images
+      : [foundProduct.image];
+  }, [foundProduct, selectedColor]);
 
   /*
    * =====================================================
-   * 顏色改變後
-   * 自動回到第一張圖片
+   * 顏色改變 → 回第一張
    * =====================================================
    */
 
@@ -144,15 +128,29 @@ export default function ProductPage() {
     setImageIndex(0);
   }, [selectedColor]);
 
+  /*
+   * =====================================================
+   * 購物車數量
+   * =====================================================
+   */
+
   useEffect(() => {
-    const updateCart = () => setCartCount(getCartCount());
+    const updateCart = () => {
+      setCartCount(getCartCount());
+    };
 
     updateCart();
 
-    window.addEventListener("cart-updated", updateCart);
+    window.addEventListener(
+      "cart-updated",
+      updateCart
+    );
 
     return () => {
-      window.removeEventListener("cart-updated", updateCart);
+      window.removeEventListener(
+        "cart-updated",
+        updateCart
+      );
     };
   }, []);
 
@@ -162,12 +160,10 @@ export default function ProductPage() {
    * =====================================================
    */
 
-  if (!product) {
+  if (!foundProduct) {
     return (
       <main className="notFound">
-
         <div>
-
           <div className="notFoundIcon">
             🔍
           </div>
@@ -184,16 +180,22 @@ export default function ProductPage() {
           <Link href="/">
             ← 回到首頁
           </Link>
-
         </div>
-
       </main>
     );
   }
 
   /*
    * =====================================================
-   * 目前主圖
+   * 從這裡開始 product 一定存在
+   * =====================================================
+   */
+
+  const product = foundProduct;
+
+  /*
+   * =====================================================
+   * 主圖
    * =====================================================
    */
 
@@ -208,12 +210,15 @@ export default function ProductPage() {
    * =====================================================
    */
 
-  const discount = Math.round(
-    (1 -
-      product.price /
-        product.oldPrice) *
-      100
-  );
+  const discount =
+    product.oldPrice > 0
+      ? Math.round(
+          (1 -
+            product.price /
+              product.oldPrice) *
+            100
+        )
+      : 0;
 
   /*
    * =====================================================
@@ -225,21 +230,19 @@ export default function ProductPage() {
     ...products.filter(
       (item) =>
         item.id !== product.id &&
-        item.category ===
-          product.category
+        item.category === product.category
     ),
 
     ...products.filter(
       (item) =>
         item.id !== product.id &&
-        item.category !==
-          product.category
+        item.category !== product.category
     ),
   ].slice(0, 4);
 
   /*
    * =====================================================
-   * 選擇商品規格
+   * 選擇規格
    * =====================================================
    */
 
@@ -247,12 +250,10 @@ export default function ProductPage() {
     optionName: string,
     value: string
   ) {
-    setSelectedOptions(
-      (previous) => ({
-        ...previous,
-        [optionName]: value,
-      })
-    );
+    setSelectedOptions((previous) => ({
+      ...previous,
+      [optionName]: value,
+    }));
   }
 
   /*
@@ -262,19 +263,17 @@ export default function ProductPage() {
    */
 
   function decreaseQuantity() {
-    setQuantity(
-      (current) =>
-        Math.max(1, current - 1)
+    setQuantity((current) =>
+      Math.max(1, current - 1)
     );
   }
 
   function increaseQuantity() {
-    setQuantity(
-      (current) =>
-        Math.min(
-          product.stock,
-          current + 1
-        )
+    setQuantity((current) =>
+      Math.min(
+        Math.max(1, product.stock),
+        current + 1
+      )
     );
   }
 
@@ -286,7 +285,10 @@ export default function ProductPage() {
 
   function addToCart() {
     for (let i = 0; i < quantity; i++) {
-      saveCartItem(product, selectedOptions);
+      saveCartItem(
+        product,
+        selectedOptions
+      );
     }
 
     setCartCount(getCartCount());
@@ -304,9 +306,7 @@ export default function ProductPage() {
 
   function buyNow() {
     const optionsText =
-      Object.entries(
-        selectedOptions
-      )
+      Object.entries(selectedOptions)
         .map(
           ([name, value]) =>
             `${name}：${value}`
@@ -324,33 +324,19 @@ export default function ProductPage() {
 
   /*
    * =====================================================
-   * 圖片載入錯誤
+   * 圖片錯誤
    * =====================================================
    */
 
   function handleMainImageError(
     event: React.SyntheticEvent<HTMLImageElement>
   ) {
-    const img =
-      event.currentTarget;
+    const img = event.currentTarget;
 
-    /*
-     * 如果目前不是商品主圖
-     * 嘗試改回主圖
-     */
-
-    if (
-      img.src !==
-      product.image
-    ) {
-      img.src =
-        product.image;
+    if (img.src !== product.image) {
+      img.src = product.image;
       return;
     }
-
-    /*
-     * 最後直接隱藏破圖
-     */
 
     img.style.opacity = "0";
   }
@@ -455,9 +441,7 @@ export default function ProductPage() {
           </div>
 
 
-          {/* =================================================
-              THUMBNAILS
-          ================================================= */}
+          {/* THUMBNAILS */}
 
           <div className="thumbnails">
 
@@ -474,6 +458,7 @@ export default function ProductPage() {
                   onClick={() =>
                     setImageIndex(index)
                   }
+                  type="button"
                 >
 
                   <img
@@ -481,9 +466,7 @@ export default function ProductPage() {
                     alt={`${product.name} ${
                       index + 1
                     }`}
-                    onError={(
-                      event
-                    ) => {
+                    onError={(event) => {
                       event.currentTarget.style.display =
                         "none";
                     }}
@@ -497,9 +480,7 @@ export default function ProductPage() {
           </div>
 
 
-          {/* =================================================
-              COLOR PREVIEW
-          ================================================= */}
+          {/* COLOR PREVIEW */}
 
           {selectedColor && (
             <div className="selectedColorInfo">
@@ -533,9 +514,7 @@ export default function ProductPage() {
           </h1>
 
 
-          {/* =================================================
-              RATING
-          ================================================= */}
+          {/* RATING */}
 
           <div className="ratingRow">
 
@@ -560,9 +539,7 @@ export default function ProductPage() {
           </div>
 
 
-          {/* =================================================
-              PRICE
-          ================================================= */}
+          {/* PRICE */}
 
           <div className="priceBox">
 
@@ -583,9 +560,7 @@ export default function ProductPage() {
           </div>
 
 
-          {/* =================================================
-              ACTIVITY
-          ================================================= */}
+          {/* ACTIVITY */}
 
           <div className="activityBox">
 
@@ -604,9 +579,7 @@ export default function ProductPage() {
           </div>
 
 
-          {/* =================================================
-              OPTIONS
-          ================================================= */}
+          {/* OPTIONS */}
 
           {product.options?.map(
             (option) => {
@@ -618,7 +591,6 @@ export default function ProductPage() {
                 option.values[0];
 
               return (
-
                 <div
                   className="optionGroup"
                   key={option.name}
@@ -630,9 +602,7 @@ export default function ProductPage() {
 
                     <span>
                       ：
-                      {
-                        optionSelected
-                      }
+                      {optionSelected}
                     </span>
 
                   </div>
@@ -656,9 +626,9 @@ export default function ProductPage() {
                             "color";
 
                         return (
-
                           <button
                             key={value}
+                            type="button"
                             className={
                               isSelected
                                 ? "option selected"
@@ -684,25 +654,19 @@ export default function ProductPage() {
                             {value}
 
                           </button>
-
                         );
-
                       }
                     )}
 
                   </div>
 
                 </div>
-
               );
-
             }
           )}
 
 
-          {/* =================================================
-              QUANTITY
-          ================================================= */}
+          {/* QUANTITY */}
 
           <div className="quantityArea">
 
@@ -713,6 +677,7 @@ export default function ProductPage() {
             <div className="quantity">
 
               <button
+                type="button"
                 onClick={
                   decreaseQuantity
                 }
@@ -725,6 +690,7 @@ export default function ProductPage() {
               </span>
 
               <button
+                type="button"
                 onClick={
                   increaseQuantity
                 }
@@ -737,13 +703,12 @@ export default function ProductPage() {
           </div>
 
 
-          {/* =================================================
-              BUTTONS
-          ================================================= */}
+          {/* BUTTONS */}
 
           <div className="buttons">
 
             <button
+              type="button"
               className="addButton"
               onClick={addToCart}
             >
@@ -751,6 +716,7 @@ export default function ProductPage() {
             </button>
 
             <button
+              type="button"
               className="buyButton"
               onClick={buyNow}
             >
@@ -760,9 +726,7 @@ export default function ProductPage() {
           </div>
 
 
-          {/* =================================================
-              SERVICE
-          ================================================= */}
+          {/* SERVICE */}
 
           <div className="serviceBox">
 
@@ -995,12 +959,14 @@ export default function ProductPage() {
             (item) => {
 
               const itemDiscount =
-                Math.round(
-                  (1 -
-                    item.price /
-                      item.oldPrice) *
-                    100
-                );
+                item.oldPrice > 0
+                  ? Math.round(
+                      (1 -
+                        item.price /
+                          item.oldPrice) *
+                        100
+                    )
+                  : 0;
 
               return (
 
@@ -1058,7 +1024,6 @@ export default function ProductPage() {
                 </Link>
 
               );
-
             }
           )}
 
@@ -1129,18 +1094,13 @@ export default function ProductPage() {
             sans-serif;
         }
 
-
         /* HEADER */
 
         .header {
           height: 78px;
           padding: 0 6%;
-
           background: white;
-
-          border-bottom:
-            1px solid #e5e5e5;
-
+          border-bottom: 1px solid #e5e5e5;
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -1149,40 +1109,31 @@ export default function ProductPage() {
         .logo {
           color: #111;
           text-decoration: none;
-
           font-size: 25px;
           font-weight: 900;
-
           letter-spacing: -1px;
         }
 
         .headerRight {
           display: flex;
           align-items: center;
-
           gap: 12px;
         }
 
         .backButton {
           padding: 11px 17px;
-
           color: #111;
           text-decoration: none;
-
           font-weight: 600;
         }
 
         .cartButton {
           padding: 11px 17px;
-
           background: #111;
           color: white;
-
           border: none;
           border-radius: 8px;
-
           cursor: pointer;
-
           font-weight: 700;
           text-decoration: none;
           display: inline-flex;
@@ -1191,31 +1142,22 @@ export default function ProductPage() {
 
         .cartButton span {
           display: inline-block;
-
           margin-left: 7px;
           padding: 2px 7px;
-
           background: white;
           color: #111;
-
           border-radius: 20px;
         }
-
 
         /* BREADCRUMB */
 
         .breadcrumb {
           max-width: 1300px;
           margin: 0 auto;
-
           padding: 25px 30px;
-
           display: flex;
-
           gap: 10px;
-
           color: #999;
-
           font-size: 13px;
         }
 
@@ -1224,47 +1166,32 @@ export default function ProductPage() {
           text-decoration: none;
         }
 
-
         /* PRODUCT */
 
         .productSection {
           max-width: 1300px;
           margin: 0 auto;
-
-          padding:
-            10px 30px 70px;
-
+          padding: 10px 30px 70px;
           display: grid;
-
-          grid-template-columns:
-            1.05fr .95fr;
-
+          grid-template-columns: 1.05fr .95fr;
           gap: 70px;
         }
-
 
         /* GALLERY */
 
         .mainImage {
           height: 600px;
-
           background: #eaeae8;
-
           border-radius: 18px;
-
           overflow: hidden;
-
           position: relative;
         }
 
         .mainImage img {
           width: 100%;
           height: 100%;
-
           object-fit: cover;
-
           display: block;
-
           transition:
             opacity .2s,
             transform .3s;
@@ -1273,66 +1200,44 @@ export default function ProductPage() {
         .imageTag,
         .imageDiscount {
           position: absolute;
-
           top: 18px;
-
           padding: 7px 11px;
-
           border-radius: 6px;
-
           color: white;
-
           font-size: 12px;
-
           font-weight: 700;
         }
 
         .imageTag {
           left: 18px;
-
           background: #111;
         }
 
         .imageDiscount {
           right: 18px;
-
           background: #e11d48;
         }
-
 
         /* THUMBNAILS */
 
         .thumbnails {
           display: flex;
-
           gap: 12px;
-
           margin-top: 12px;
-
           overflow-x: auto;
-
           padding-bottom: 4px;
         }
 
         .thumbnail {
           flex-shrink: 0;
-
           width: 82px;
           height: 82px;
-
           padding: 0;
-
           border-radius: 9px;
-
           overflow: hidden;
-
           background: #eee;
-
-          border:
-            2px solid transparent;
-
+          border: 2px solid transparent;
           cursor: pointer;
-
           transition: .15s;
         }
 
@@ -1347,30 +1252,20 @@ export default function ProductPage() {
         .thumbnail img {
           width: 100%;
           height: 100%;
-
           object-fit: cover;
-
           display: block;
         }
-
 
         /* SELECTED COLOR */
 
         .selectedColorInfo {
           margin-top: 15px;
-
           padding: 13px 16px;
-
           background: white;
-
           border-radius: 8px;
-
           display: flex;
-
           justify-content: space-between;
-
           align-items: center;
-
           font-size: 13px;
         }
 
@@ -1378,45 +1273,32 @@ export default function ProductPage() {
           color: #999;
         }
 
-
         /* INFORMATION */
 
         .brand {
           margin-top: 10px;
-
           color: #999;
-
           font-size: 12px;
-
           letter-spacing: 2px;
         }
 
         .information h1 {
-          margin:
-            12px 0 18px;
-
+          margin: 12px 0 18px;
           font-size: 46px;
-
           line-height: 1.1;
-
           letter-spacing: -2px;
         }
 
         .ratingRow {
           display: flex;
-
           align-items: center;
-
           gap: 12px;
-
           flex-wrap: wrap;
-
           font-size: 14px;
         }
 
         .stars {
           color: #f59e0b;
-
           letter-spacing: 2px;
         }
 
@@ -1425,75 +1307,50 @@ export default function ProductPage() {
           color: #777;
         }
 
-
         /* PRICE */
 
         .priceBox {
           margin-top: 30px;
-
           padding: 24px;
-
           background: white;
-
           border-radius: 12px;
         }
 
         .oldPrice {
           color: #999;
-
           font-size: 17px;
-
-          text-decoration:
-            line-through;
+          text-decoration: line-through;
         }
 
         .price {
           margin-top: 5px;
-
           font-size: 43px;
-
           font-weight: 900;
-
           letter-spacing: -1px;
         }
 
         .discountBadge {
           display: inline-block;
-
           margin-top: 8px;
-
           padding: 5px 8px;
-
           background: #e11d48;
-
           color: white;
-
           border-radius: 5px;
-
           font-size: 12px;
-
           font-weight: 700;
         }
-
 
         /* ACTIVITY */
 
         .activityBox {
           margin-top: 15px;
-
           padding: 17px;
-
           background: #fff8eb;
-
           border-radius: 10px;
-
           color: #6b4d18;
-
           line-height: 2;
-
           font-size: 13px;
         }
-
 
         /* OPTIONS */
 
@@ -1503,47 +1360,31 @@ export default function ProductPage() {
 
         .optionTitle {
           margin-bottom: 10px;
-
           font-size: 14px;
-
           font-weight: 700;
         }
 
         .optionTitle span {
           color: #777;
-
           font-weight: 400;
         }
 
         .options {
           display: flex;
-
           flex-wrap: wrap;
-
           gap: 9px;
         }
 
         .option {
           min-height: 44px;
-
-          padding:
-            10px 17px;
-
-          border:
-            1px solid #ccc;
-
+          padding: 10px 17px;
+          border: 1px solid #ccc;
           background: white;
-
           border-radius: 7px;
-
           cursor: pointer;
-
           display: flex;
-
           align-items: center;
-
           gap: 8px;
-
           transition: .15s;
         }
 
@@ -1552,32 +1393,21 @@ export default function ProductPage() {
         }
 
         .option.selected {
-          padding:
-            9px 16px;
-
-          border:
-            2px solid #111;
-
+          padding: 9px 16px;
+          border: 2px solid #111;
           background: #111;
-
           color: white;
-
           font-weight: 700;
         }
-
 
         /* COLOR DOT */
 
         .colorDot {
           width: 17px;
           height: 17px;
-
           border-radius: 50%;
-
           display: inline-block;
-
-          border:
-            1px solid #aaa;
+          border: 1px solid #aaa;
         }
 
         .colorDot.鈦原色 {
@@ -1624,7 +1454,6 @@ export default function ProductPage() {
           background: #47795a;
         }
 
-
         /* QUANTITY */
 
         .quantityArea {
@@ -1633,31 +1462,20 @@ export default function ProductPage() {
 
         .quantity {
           width: fit-content;
-
           display: flex;
-
           align-items: center;
-
-          border:
-            1px solid #ccc;
-
+          border: 1px solid #ccc;
           background: white;
-
           border-radius: 8px;
-
           overflow: hidden;
         }
 
         .quantity button {
           width: 44px;
           height: 44px;
-
           border: none;
-
           background: white;
-
           font-size: 20px;
-
           cursor: pointer;
         }
 
@@ -1667,115 +1485,79 @@ export default function ProductPage() {
 
         .quantity span {
           width: 45px;
-
           text-align: center;
-
           font-weight: 600;
         }
-
 
         /* BUTTONS */
 
         .buttons {
           display: grid;
-
-          grid-template-columns:
-            1fr 1fr;
-
+          grid-template-columns: 1fr 1fr;
           gap: 10px;
-
           margin-top: 25px;
         }
 
         .addButton,
         .buyButton {
           padding: 17px;
-
           border-radius: 9px;
-
           font-size: 16px;
-
           font-weight: 800;
-
           cursor: pointer;
         }
 
         .addButton {
           background: white;
-
-          border:
-            2px solid #111;
+          border: 2px solid #111;
         }
 
         .addButton:hover {
           background: #111;
-
           color: white;
         }
 
         .buyButton {
           background: #111;
-
           color: white;
-
-          border:
-            2px solid #111;
+          border: 2px solid #111;
         }
 
         .buyButton:hover {
           background: #333;
         }
 
-
         /* SERVICE */
 
         .serviceBox {
           margin-top: 18px;
-
           padding-top: 18px;
-
-          border-top:
-            1px solid #ddd;
-
+          border-top: 1px solid #ddd;
           display: flex;
-
           flex-direction: column;
-
           gap: 8px;
-
           color: #666;
-
           font-size: 13px;
         }
-
 
         /* DETAILS */
 
         .details,
         .reviewsSection {
           max-width: 1300px;
-
           margin: 0 auto;
-
-          padding:
-            65px 30px;
-
-          border-top:
-            1px solid #ddd;
+          padding: 65px 30px;
+          border-top: 1px solid #ddd;
         }
 
         .detailsHeader span {
           color: #999;
-
           font-size: 10px;
-
           letter-spacing: 2px;
         }
 
         .detailsHeader h2 {
-          margin:
-            8px 0 30px;
-
+          margin: 8px 0 30px;
           font-size: 32px;
         }
 
@@ -1790,166 +1572,120 @@ export default function ProductPage() {
 
         .description p {
           color: #555;
-
           line-height: 1.9;
         }
 
         .specSection {
           max-width: 900px;
-
           margin-top: 40px;
         }
 
         .specTable {
-          border-top:
-            1px solid #ddd;
+          border-top: 1px solid #ddd;
         }
 
         .specRow {
           display: grid;
-
-          grid-template-columns:
-            220px 1fr;
+          grid-template-columns: 220px 1fr;
         }
 
         .specLabel,
         .specValue {
           padding: 16px;
-
-          border-bottom:
-            1px solid #ddd;
+          border-bottom: 1px solid #ddd;
         }
 
         .specLabel {
           background: #eee;
-
           font-weight: 700;
         }
 
         .specValue {
           background: white;
-
           color: #555;
         }
-
 
         /* REVIEWS */
 
         .reviewSummary {
           width: fit-content;
-
           padding: 25px;
-
           background: white;
-
           border-radius: 12px;
-
           display: flex;
-
           align-items: center;
-
           gap: 25px;
         }
 
         .bigRating {
           font-size: 45px;
-
           font-weight: 900;
         }
 
         .bigRating span {
           color: #999;
-
           font-size: 14px;
         }
 
         .reviewSummary p {
-          margin:
-            5px 0 0;
-
+          margin: 5px 0 0;
           color: #888;
         }
 
         .reviewGrid {
           margin-top: 25px;
-
           display: grid;
-
-          grid-template-columns:
-            repeat(3, 1fr);
-
+          grid-template-columns: repeat(3, 1fr);
           gap: 15px;
         }
 
         .review {
           padding: 22px;
-
           background: white;
-
           border-radius: 12px;
         }
 
         .reviewTop {
           display: flex;
-
-          justify-content:
-            space-between;
-
+          justify-content: space-between;
           gap: 10px;
         }
 
         .review p {
           color: #555;
-
           line-height: 1.7;
         }
-
 
         /* RECOMMEND */
 
         .recommendSection {
           max-width: 1300px;
-
           margin: 0 auto;
-
-          padding:
-            65px 30px;
-
-          border-top:
-            1px solid #ddd;
+          padding: 65px 30px;
+          border-top: 1px solid #ddd;
         }
 
         .recommendGrid {
           display: grid;
-
           grid-template-columns:
             repeat(4, minmax(0, 1fr));
-
           gap: 18px;
         }
 
         .recommendCard {
           display: block;
-
           color: inherit;
-
           text-decoration: none;
-
           background: white;
-
           border-radius: 13px;
-
           overflow: hidden;
-
           transition:
             transform .2s,
             box-shadow .2s;
         }
 
         .recommendCard:hover {
-          transform:
-            translateY(-5px);
-
+          transform: translateY(-5px);
           box-shadow:
             0 15px 35px
             rgba(0,0,0,.12);
@@ -1957,40 +1693,27 @@ export default function ProductPage() {
 
         .recommendImage {
           height: 230px;
-
           background: #eee;
-
           position: relative;
-
           overflow: hidden;
         }
 
         .recommendImage img {
           width: 100%;
           height: 100%;
-
           object-fit: cover;
-
           display: block;
         }
 
         .recommendTag {
           position: absolute;
-
           top: 12px;
           left: 12px;
-
-          padding:
-            5px 8px;
-
+          padding: 5px 8px;
           background: #111;
-
           color: white;
-
           border-radius: 5px;
-
           font-size: 10px;
-
           font-weight: 700;
         }
 
@@ -2000,29 +1723,20 @@ export default function ProductPage() {
 
         .recommendBrand {
           color: #999;
-
           font-size: 10px;
-
           letter-spacing: 1px;
         }
 
         .recommendInfo h3 {
-          margin:
-            7px 0 14px;
-
+          margin: 7px 0 14px;
           font-size: 16px;
-
           line-height: 1.4;
         }
 
         .recommendPrice {
           display: flex;
-
           align-items: center;
-
-          justify-content:
-            space-between;
-
+          justify-content: space-between;
           gap: 10px;
         }
 
@@ -2031,67 +1745,44 @@ export default function ProductPage() {
         }
 
         .recommendPrice span {
-          padding:
-            4px 6px;
-
+          padding: 4px 6px;
           background: #e11d48;
-
           color: white;
-
           border-radius: 4px;
-
           font-size: 10px;
-
           font-weight: 700;
         }
-
 
         /* FOOTER */
 
         .footer {
-          padding:
-            60px 8%;
-
+          padding: 60px 8%;
           background: #111;
-
           color: white;
-
           display: flex;
-
-          justify-content:
-            space-between;
-
+          justify-content: space-between;
           gap: 60px;
         }
 
         .footerLogo {
           font-size: 28px;
-
           font-weight: 900;
         }
 
         .footer p {
           max-width: 500px;
-
           color: #999;
-
           line-height: 1.7;
         }
-
 
         /* NOT FOUND */
 
         .notFound {
           min-height: 100vh;
-
           display: flex;
-
           align-items: center;
-
           justify-content: center;
-
           text-align: center;
-
           background: #f5f5f3;
         }
 
@@ -2105,16 +1796,13 @@ export default function ProductPage() {
 
         .notFound p {
           color: #777;
-
           margin-bottom: 25px;
         }
 
         .notFound a {
           color: #111;
-
           font-weight: 700;
         }
-
 
         /* TABLET */
 
@@ -2122,7 +1810,6 @@ export default function ProductPage() {
 
           .productSection {
             grid-template-columns: 1fr;
-
             gap: 35px;
           }
 
@@ -2137,14 +1824,12 @@ export default function ProductPage() {
 
         }
 
-
         /* MOBILE */
 
         @media (max-width: 600px) {
 
           .header {
             height: auto;
-
             padding: 15px;
           }
 
@@ -2153,11 +1838,8 @@ export default function ProductPage() {
           }
 
           .breadcrumb {
-            padding:
-              20px 15px;
-
+            padding: 20px 15px;
             overflow-x: auto;
-
             white-space: nowrap;
           }
 
@@ -2166,7 +1848,6 @@ export default function ProductPage() {
           .reviewsSection,
           .recommendSection {
             padding-left: 15px;
-
             padding-right: 15px;
           }
 
@@ -2183,19 +1864,16 @@ export default function ProductPage() {
           }
 
           .buttons {
-            grid-template-columns:
-              1fr;
+            grid-template-columns: 1fr;
           }
 
           .specRow {
-            grid-template-columns:
-              120px 1fr;
+            grid-template-columns: 120px 1fr;
           }
 
           .recommendGrid {
             grid-template-columns:
               repeat(2, 1fr);
-
             gap: 10px;
           }
 
@@ -2213,16 +1891,12 @@ export default function ProductPage() {
 
           .recommendPrice {
             flex-direction: column;
-
-            align-items:
-              flex-start;
+            align-items: flex-start;
           }
 
           .footer {
             flex-direction: column;
-
-            padding:
-              45px 20px;
+            padding: 45px 20px;
           }
 
         }
