@@ -23,24 +23,55 @@ function normalizeOptions(value: unknown): Record<string, string> {
 
 function normalizeQuantity(value: unknown): number {
   const quantity = Number(value);
-  if (!Number.isFinite(quantity)) return 1;
+
+  if (!Number.isFinite(quantity)) {
+    return 1;
+  }
+
   return Math.max(1, Math.floor(quantity));
 }
 
+function sameOptions(
+  a: Record<string, string> = {},
+  b: Record<string, string> = {}
+) {
+  const keysA = Object.keys(a).sort();
+  const keysB = Object.keys(b).sort();
+
+  if (keysA.length !== keysB.length) {
+    return false;
+  }
+
+  return keysA.every((key, index) => {
+    const otherKey = keysB[index];
+    return key === otherKey && a[key] === b[otherKey];
+  });
+}
+
 export function getCart(): CartItem[] {
-  if (typeof window === "undefined") return [];
+  if (typeof window === "undefined") {
+    return [];
+  }
 
   try {
     const data = window.localStorage.getItem(CART_KEY);
-    if (!data) return [];
+
+    if (!data) {
+      return [];
+    }
 
     const parsed: unknown = JSON.parse(data);
-    if (!Array.isArray(parsed)) return [];
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
 
     return parsed
       .filter(
         (item): item is Record<string, unknown> =>
-          !!item && typeof item === "object" && !Array.isArray(item)
+          !!item &&
+          typeof item === "object" &&
+          !Array.isArray(item)
       )
       .map((item) => ({
         productId: String(item.productId ?? ""),
@@ -55,7 +86,9 @@ export function getCart(): CartItem[] {
 }
 
 export function saveCart(cart: CartItem[]) {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined") {
+    return;
+  }
 
   try {
     window.localStorage.setItem(CART_KEY, JSON.stringify(cart));
@@ -65,27 +98,21 @@ export function saveCart(cart: CartItem[]) {
   }
 }
 
-function sameOptions(
-  a: Record<string, string> = {},
-  b: Record<string, string> = {}
-) {
-  const keysA = Object.keys(a).sort();
-  const keysB = Object.keys(b).sort();
-
-  if (keysA.length !== keysB.length) return false;
-
-  return keysA.every((key, index) => {
-    const otherKey = keysB[index];
-    return key === otherKey && a[key] === b[otherKey];
-  });
-}
-
 export function addToCart(
   product: Product,
-  selectedOptions: Record<string, string> = {}
+  selectedOptions: Record<string, string> = {},
+  quantity = 1
 ) {
   const cart = getCart();
   const safeOptions = normalizeOptions(selectedOptions);
+  const safeQuantity = Math.min(
+    product.stock,
+    normalizeQuantity(quantity)
+  );
+
+  if (product.stock <= 0 || safeQuantity <= 0) {
+    return;
+  }
 
   const existingItem = cart.find(
     (item) =>
@@ -96,12 +123,12 @@ export function addToCart(
   if (existingItem) {
     existingItem.quantity = Math.min(
       product.stock,
-      existingItem.quantity + 1
+      existingItem.quantity + safeQuantity
     );
   } else {
     cart.push({
       productId: product.id,
-      quantity: 1,
+      quantity: safeQuantity,
       selectedOptions: safeOptions,
     });
   }
@@ -121,18 +148,21 @@ export function updateCartQuantity(
       sameOptions(cartItem.selectedOptions, selectedOptions)
   );
 
-  if (!item) return;
-
-  const product = getProductById(productId);
+  if (!item) {
+    return;
+  }
 
   if (quantity <= 0) {
     removeFromCart(productId, selectedOptions);
     return;
   }
 
+  const product = getProductById(productId);
+  const safeQuantity = Math.floor(quantity);
+
   item.quantity = product
-    ? Math.min(product.stock, Math.floor(quantity))
-    : Math.floor(quantity);
+    ? Math.min(product.stock, safeQuantity)
+    : safeQuantity;
 
   if (item.quantity <= 0) {
     removeFromCart(productId, selectedOptions);
@@ -147,6 +177,7 @@ export function removeFromCart(
   selectedOptions: Record<string, string> = {}
 ) {
   const cart = getCart();
+
   const newCart = cart.filter(
     (item) =>
       !(
@@ -163,7 +194,10 @@ export function clearCart() {
 }
 
 export function getCartCount() {
-  return getCart().reduce((total, item) => total + item.quantity, 0);
+  return getCart().reduce(
+    (total, item) => total + item.quantity,
+    0
+  );
 }
 
 export function getCartProducts() {
