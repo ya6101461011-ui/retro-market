@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   clearCart,
@@ -11,7 +11,6 @@ import {
 import { getProductById } from "@/lib/products";
 
 type CartItem = ReturnType<typeof getCart>[number];
-
 type DisplayItem = CartItem & {
   product: NonNullable<ReturnType<typeof getProductById>>;
 };
@@ -23,17 +22,27 @@ export default function CartPage() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [ready, setReady] = useState(false);
 
-  const refresh = () => {
+  const refresh = useCallback(() => {
     setItems(getCart());
     setReady(true);
-  };
+  }, []);
 
   useEffect(() => {
     refresh();
+
     const onUpdate = () => refresh();
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === "retro-market-cart") refresh();
+    };
+
     window.addEventListener("cart-updated", onUpdate);
-    return () => window.removeEventListener("cart-updated", onUpdate);
-  }, []);
+    window.addEventListener("storage", onStorage);
+
+    return () => {
+      window.removeEventListener("cart-updated", onUpdate);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, [refresh]);
 
   const displayItems = useMemo<DisplayItem[]>(() => {
     return items
@@ -54,25 +63,25 @@ export default function CartPage() {
   );
 
   function changeQuantity(item: DisplayItem, delta: number) {
-    const next = item.quantity + delta;
-    const stock = item.product.stock;
+    const next = Math.min(
+      item.product.stock,
+      Math.max(1, item.quantity + delta)
+    );
+
     updateCartQuantity(
       item.productId,
-      Math.min(stock, next),
+      next,
       item.selectedOptions
     );
-    refresh();
   }
 
   function removeItem(item: DisplayItem) {
     removeFromCart(item.productId, item.selectedOptions);
-    refresh();
   }
 
   function clearAll() {
     if (window.confirm("確定要清空購物車嗎？")) {
       clearCart();
-      refresh();
     }
   }
 
@@ -124,6 +133,7 @@ export default function CartPage() {
                     <img
                       src={item.product.image}
                       alt={item.product.name}
+                      loading="lazy"
                       onError={(event) => {
                         if (event.currentTarget.src !== FALLBACK_IMAGE) {
                           event.currentTarget.src = FALLBACK_IMAGE;
@@ -141,23 +151,12 @@ export default function CartPage() {
                     <span className="unitPrice">NT${item.product.price.toLocaleString()} / 件</span>
 
                     <div className="controls">
-                      <div className="quantity" aria-label="商品數量">
-                        <button
-                          type="button"
-                          onClick={() => changeQuantity(item, -1)}
-                          aria-label="減少數量"
-                        >−</button>
+                      <div className="quantity" aria-label={`${item.product.name} 商品數量`}>
+                        <button type="button" onClick={() => changeQuantity(item, -1)} aria-label="減少數量">−</button>
                         <span>{item.quantity}</span>
-                        <button
-                          type="button"
-                          onClick={() => changeQuantity(item, 1)}
-                          disabled={atMax}
-                          aria-label="增加數量"
-                        >＋</button>
+                        <button type="button" onClick={() => changeQuantity(item, 1)} disabled={atMax} aria-label="增加數量">＋</button>
                       </div>
-                      <button type="button" className="remove" onClick={() => removeItem(item)}>
-                        刪除
-                      </button>
+                      <button type="button" className="remove" onClick={() => removeItem(item)}>刪除</button>
                       {atMax && <span className="stockHint">已達庫存上限</span>}
                     </div>
                   </div>
@@ -233,22 +232,7 @@ export default function CartPage() {
         .empty p { color:#777; }
         .primary { width:max-content; margin:20px auto 0; padding:14px 28px; }
         @media(max-width:900px) { .content { grid-template-columns:1fr; } .summary { position:static; } }
-        @media(max-width:600px) {
-          .header { height:68px; padding:0 15px; }
-          .logo { font-size:21px; }
-          .continue { font-size:13px; }
-          .titleWrap,.content { width:calc(100% - 30px); }
-          .titleWrap { padding:40px 0 20px; }
-          h1 { font-size:38px; }
-          .item { grid-template-columns:80px minmax(0,1fr); gap:14px; padding:18px 15px; }
-          .imageLink { width:80px; height:80px; }
-          .itemTotal { grid-column:2; justify-self:start; font-size:16px; margin-top:-5px; }
-          .name { font-size:16px; }
-          .controls { gap:8px; }
-          .listHeader { padding:0 15px; }
-          .summary { padding:20px; }
-          .empty { padding:55px 20px; }
-        }
+        @media(max-width:600px) { .header { height:68px; padding:0 15px; } .logo { font-size:21px; } .continue { font-size:13px; } .titleWrap,.content { width:calc(100% - 30px); } .titleWrap { padding:40px 0 20px; } h1 { font-size:38px; } .item { grid-template-columns:80px minmax(0,1fr); gap:14px; padding:18px 15px; } .imageLink { width:80px; height:80px; } .itemTotal { grid-column:2; justify-self:start; font-size:16px; margin-top:-5px; } .name { font-size:16px; } .controls { gap:8px; } .listHeader { padding:0 15px; } .summary { padding:20px; } .empty { padding:55px 20px; } }
       `}</style>
     </main>
   );
