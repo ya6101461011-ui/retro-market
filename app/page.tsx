@@ -9,13 +9,13 @@ type Product = (typeof products)[number];
 
 const categories = [
   "全部", "手機", "平板", "筆電", "電腦", "顯示器", "顯卡", "電視", "電玩", "相機", "空拍機",
-  "音響", "耳機", "家電", "冷氣", "智慧手錶", "精品", "服飾", "球鞋", "名錶", "汽車",
+  "音響", "耳機", "家電", "冷氣", "智慧手錶", "精品", "服飾", "球鞋", "名錶", "汽車", "機車", "汽機車用品", "美妝", "保養", "香水",
 ];
 
 const categoryToParam: Record<string, string> = {
   全部: "all", 手機: "phone", 平板: "tablet", 筆電: "laptop", 電腦: "computer", 顯示器: "display", 顯卡: "gpu",
   電視: "tv", 電玩: "gaming", 相機: "camera", 空拍機: "drone", 音響: "speaker", 耳機: "headphones", 家電: "home-appliance",
-  冷氣: "air-conditioner", 智慧手錶: "smartwatch", 精品: "luxury", 服飾: "fashion", 球鞋: "sneakers", 名錶: "watch", 汽車: "car",
+  冷氣: "air-conditioner", 智慧手錶: "smartwatch", 精品: "luxury", 服飾: "fashion", 球鞋: "sneakers", 名錶: "watch", 汽車: "car", 機車: "motorcycle", "汽機車用品": "auto-moto", 美妝: "beauty", 保養: "skincare", 香水: "fragrance",
 };
 const paramToCategory = Object.fromEntries(Object.entries(categoryToParam).map(([name, param]) => [param, name]));
 
