@@ -1,0 +1,53 @@
+name: Add Auto Moto Beauty Catalog
+
+on:
+  push:
+    paths-ignore:
+      - '.github/workflows/add-catalog-categories.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-catalog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Merge new catalogs and categories
+        shell: python
+        run: |
+          from pathlib import Path
+
+          p = Path('lib/products.ts')
+          s = p.read_text(encoding='utf-8')
+          if 'autoMotoProducts' not in s:
+              s = s.replace(
+                  'import { appleProducts } from "./apple-products";\n',
+                  'import { appleProducts } from "./apple-products";\nimport { autoMotoProducts } from "./auto-moto-products";\nimport { beautyProducts } from "./beauty-products";\n'
+              )
+              s = s.replace(
+                  'export const products: Product[] = [\n  ...appleProducts,',
+                  'export const products: Product[] = [\n  ...appleProducts,\n  ...autoMotoProducts,\n  ...beautyProducts,'
+              )
+              p.write_text(s, encoding='utf-8')
+
+          p = Path('app/page.tsx')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace(
+              '"名錶", "汽車",\n',
+              '"名錶", "汽車", "機車", "汽機車用品", "美妝", "保養", "香水",\n'
+          )
+          s = s.replace(
+              '名錶: "watch", 汽車: "car",\n',
+              '名錶: "watch", 汽車: "car", 機車: "motorcycle", "汽機車用品": "auto-moto", 美妝: "beauty", 保養: "skincare", 香水: "fragrance",\n'
+          )
+          p.write_text(s, encoding='utf-8')
+
+      - name: Commit catalog update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib/products.ts app/page.tsx
+          git diff --cached --quiet || git commit -m "Add auto moto and beauty categories"
+          git push
