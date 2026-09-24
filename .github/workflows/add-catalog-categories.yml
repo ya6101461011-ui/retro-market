@@ -21,27 +21,42 @@ jobs:
 
           p = Path('lib/products.ts')
           s = p.read_text(encoding='utf-8')
-          if 'autoMotoProducts' not in s:
+
+          imports = 'import { appleProducts } from "./apple-products";\n'
+          if 'import { autoMotoProducts }' not in s:
+              s = s.replace(imports, imports + 'import { autoMotoProducts } from "./auto-moto-products";\n')
+          if 'import { beautyProducts }' not in s:
+              marker = 'import { autoMotoProducts } from "./auto-moto-products";\n'
+              s = s.replace(marker, marker + 'import { beautyProducts } from "./beauty-products";\n')
+          if 'import { autoBeautyProducts }' not in s:
+              marker = 'import { beautyProducts } from "./beauty-products";\n'
+              s = s.replace(marker, marker + 'import { autoBeautyProducts } from "./auto-beauty-products";\n')
+
+          if '...autoMotoProducts,' in s and '...beautyProducts,' in s and '...autoBeautyProducts,' not in s:
               s = s.replace(
-                  'import { appleProducts } from "./apple-products";\n',
-                  'import { appleProducts } from "./apple-products";\nimport { autoMotoProducts } from "./auto-moto-products";\nimport { beautyProducts } from "./beauty-products";\n'
+                  '  ...beautyProducts,',
+                  '  ...beautyProducts,\n  ...autoBeautyProducts,'
               )
+          elif '...autoBeautyProducts,' not in s:
               s = s.replace(
                   'export const products: Product[] = [\n  ...appleProducts,',
-                  'export const products: Product[] = [\n  ...appleProducts,\n  ...autoMotoProducts,\n  ...beautyProducts,'
+                  'export const products: Product[] = [\n  ...appleProducts,\n  ...autoMotoProducts,\n  ...beautyProducts,\n  ...autoBeautyProducts,'
               )
-              p.write_text(s, encoding='utf-8')
+
+          p.write_text(s, encoding='utf-8')
 
           p = Path('app/page.tsx')
           s = p.read_text(encoding='utf-8')
-          s = s.replace(
-              '"名錶", "汽車",\n',
-              '"名錶", "汽車", "機車", "汽機車用品", "美妝", "保養", "香水",\n'
-          )
-          s = s.replace(
-              '名錶: "watch", 汽車: "car",\n',
-              '名錶: "watch", 汽車: "car", 機車: "motorcycle", "汽機車用品": "auto-moto", 美妝: "beauty", 保養: "skincare", 香水: "fragrance",\n'
-          )
+          if '"機車"' not in s:
+              s = s.replace(
+                  '"名錶", "汽車",\n',
+                  '"名錶", "汽車", "機車", "汽機車用品", "美妝", "保養", "香水",\n'
+              )
+          if '機車: "motorcycle"' not in s:
+              s = s.replace(
+                  '名錶: "watch", 汽車: "car",\n',
+                  '名錶: "watch", 汽車: "car", 機車: "motorcycle", "汽機車用品": "auto-moto", 美妝: "beauty", 保養: "skincare", 香水: "fragrance",\n'
+              )
           p.write_text(s, encoding='utf-8')
 
       - name: Commit catalog update
@@ -49,5 +64,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add lib/products.ts app/page.tsx
-          git diff --cached --quiet || git commit -m "Add auto moto and beauty categories"
+          git diff --cached --quiet || git commit -m "Integrate extended auto and beauty catalog"
           git push
