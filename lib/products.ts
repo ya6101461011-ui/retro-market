@@ -1,6 +1,7 @@
 import { appleProducts } from "./apple-products";
 import { autoMotoProducts } from "./auto-moto-products";
 import { beautyProducts } from "./beauty-products";
+import { autoBeautyProducts } from "./auto-beauty-products";
 
 export type Product = {
   id: string;
@@ -55,6 +56,7 @@ export const products: Product[] = [
   ...appleProducts,
   ...autoMotoProducts,
   ...beautyProducts,
+  ...autoBeautyProducts,
 
 
   // =====================================================
